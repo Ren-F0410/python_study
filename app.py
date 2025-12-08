@@ -5,13 +5,13 @@ from datetime import datetime
 from openai import OpenAI
 
 # --- 1. 設定 ---
-st.set_page_config(page_title="Owl v2.2", page_icon="🦉", layout="wide")
+st.set_page_config(page_title="Owl v2.4", page_icon="🦉", layout="wide")
 DB_PATH = "owl.db"
 
 def init_db():
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
-    # 長いSQLも安全に記述
+    # 長いSQLを安全に記述
     c.execute(
         "CREATE TABLE IF NOT EXISTS projects ("
         "project_id TEXT PRIMARY KEY, name TEXT, domain TEXT, goal TEXT, "
@@ -75,13 +75,13 @@ def delete_task(tid):
     conn.close()
 
 # --- 3. UI設計 ---
-st.title("🦉 Athenalink OS v2.2")
-st.caption("Counselor Mode: High Quality & Japanese Native")
+st.title("🦉 Athenalink OS v2.4")
+st.caption("Counselor Mode: Flexible Language (Default Japanese)")
 
-st.sidebar.header("🔑 System Access")
+st.sidebar.header("🔑 システムアクセス")
 if "OPENAI_API_KEY" in st.secrets:
     api_key = st.secrets["OPENAI_API_KEY"]
-    st.sidebar.success("✅ Auto-Login Active")
+    st.sidebar.success("✅ 自動ログイン中")
 else:
     api_key = st.sidebar.text_input("OpenAI API Key", type="password")
 
@@ -109,24 +109,23 @@ with st.sidebar.expander("➕ 新規プロジェクト作成"):
             create_project(new_id, new_name, new_domain, new_goal)
             st.rerun()
 
-st.sidebar.header("🚀 Modules")
+st.sidebar.header("🚀 機能メニュー")
 menu = st.sidebar.radio(
-    "機能メニュー", 
+    "モード選択", 
     ["🏠 ダッシュボード", "✅ タスク管理", "🧠 M4 参謀本部", "📱 M1 SNS集客", "📝 M2 記事制作", "💰 M3 セールス"]
 )
 
-# --- 4. AI脳（日本語・高品質プロンプト） ---
+# --- 4. AI脳（柔軟性確保） ---
 
-# 改行しても壊れない書き方
+# 基本設定（「禁止」ではなく「基本方針」として記述）
 STYLE = (
-    "【Style Guide: Professional Counselor】\n"
-    "1. 言語: 必ず日本語で出力すること。\n"
+    "【スタイルガイド：プロのカウンセラー】\n"
+    "1. 言語: 基本的に【日本語】で出力すること。\n"
     "2. 禁止: 自分語り(私は〜)、ポエム的な表現、説教。\n"
     "3. 構成: 受容(肯定) → 分析(脳科学/心理学) → 処方(具体的解決策)。\n"
     "4. 態度: 冷静で温かいプロフェッショナル。\n"
 )
 
-# 各モードの指示（これも安全な書き方に変更）
 prompts = {
     "M4": (
         f"あなたは戦略参謀です。{STYLE}"
@@ -156,7 +155,7 @@ if not current_project_id:
 conn = sqlite3.connect(DB_PATH)
 p_data = pd.read_sql("SELECT * FROM projects WHERE project_id = ?", conn, params=(current_project_id,)).iloc[0]
 conn.close()
-p_info = f"Project: {p_data['name']}, Goal: {p_data['goal']}"
+p_info = f"プロジェクト: {p_data['name']}, 目標: {p_data['goal']}"
 
 client = OpenAI(api_key=api_key) if api_key else None
 
@@ -168,14 +167,14 @@ def render_chat(role, prompt):
     key = f"chat_{current_project_id}_{role}"
     if key not in st.session_state:
         st.session_state[key] = [{"role": "system", "content": prompt + "\n" + p_info}]
-        st.session_state[key].append({"role": "assistant", "content": "起動しました。指示をください。"})
+        st.session_state[key].append({"role": "assistant", "content": "起動しました。"})
     
     for msg in st.session_state[key]:
         if msg["role"] != "system":
             st.chat_message(msg["role"]).write(msg["content"])
     
     st.markdown("---")
-    # 入力フォーム（安全な短さ）
+    # 入力フォーム
     with st.form(key=f"form_{role}", clear_on_submit=True):
         user_input = st.text_area("指示を入力...", height=150)
         send = st.form_submit_button("送信")
@@ -183,10 +182,13 @@ def render_chat(role, prompt):
     if send and user_input:
         st.session_state[key].append({"role": "user", "content": user_input})
         try:
-            with st.spinner("Owl v2.2 is thinking..."):
+            with st.spinner("Owl v2.4 is thinking..."):
+                # ここで「基本日本語だけど、ユーザー指示に従う」という緩い指示を送る
+                messages_to_send = st.session_state[key].copy()
+                
                 res = client.chat.completions.create(
                     model="gpt-3.5-turbo",
-                    messages=st.session_state[key],
+                    messages=messages_to_send,
                     temperature=0.7,
                     max_tokens=3000
                 )
@@ -197,7 +199,7 @@ def render_chat(role, prompt):
 
 # --- 5. 画面表示 ---
 if menu == "🏠 ダッシュボード":
-    st.header(f"Project: {p_data['name']}")
+    st.header(f"プロジェクト: {p_data['name']}")
     st.info(p_data['goal'])
     st.subheader("🔥 今日のタスク")
     d = get_tasks(current_project_id)

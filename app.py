@@ -5,7 +5,7 @@ from datetime import datetime
 from openai import OpenAI
 
 # --- 1. アプリ設定 & DB初期化 ---
-st.set_page_config(page_title="Owl v1.7", page_icon="🦉", layout="wide")
+st.set_page_config(page_title="Owl v1.8", page_icon="🦉", layout="wide")
 
 DB_PATH = "owl.db"
 
@@ -82,8 +82,8 @@ def delete_task(task_id):
 
 # --- 3. UI構築 ---
 
-st.title("🦉 Athenalink OS v1.7")
-st.caption("Deep Empathy (Sisterhood) & Form Input Mode")
+st.title("🦉 Athenalink OS v1.8")
+st.caption("Counselor Mode: Analytical & Solution-Oriented")
 
 # サイドバー：APIキー
 st.sidebar.header("🔑 System Access")
@@ -128,27 +128,22 @@ menu = st.sidebar.radio("Menu", [
     "💰 M3 セールス"
 ])
 
-# --- 4. 脳みそのチューニング (v1.7 Sisterhood Update) ---
+# --- 4. 脳みそのチューニング (v1.8 Counselor Update) ---
 
-# 共通スタイルガイド（女性性・共感性の強化）
 STYLE_GUIDE = """
-【Athenalink Style Guide (Renイズム v3: Sisterhood)】
+【Athenalink Style Guide (Renイズム v4: Counselor)】
 ■ ペルソナ（書き手の人格）
-- **「かつて同じ沼で苦しみ、自力で這い上がった女性の先輩」**。
-- 男性的・騎士的な「守ってあげる」トーンは厳禁。
-- ロマンチックな言葉（「君」「僕」「輝く未来」など）は使わない。
-- 女子会で深夜に本音で語り合うような、リアルで少し痛いけれど温かい言葉を選ぶ。
+- **「冷静かつ温かい、解決志向の女性カウンセラー」**。
+- 詩的な表現や過剰な比喩（「魂の叫び」「千切れるような痛み」など）は控える。
+- 感情に寄り添いつつも、すぐに「なぜその感情が起きるのか（メカニズム）」と「どうすれば治るか（ソリューション）」へ話を展開する。
+- 読者を「患者」扱いせず、「変わろうとしているクライアント」としてリスペクトする。
 
-■ ターゲットへの態度
-- 上から目線のアドバイスではなく、「横に座って背中をさする」距離感。
-- 「わかるよ、辛いよね」という共感だけでなく、「でもね、それじゃあ貴方が壊れちゃうよ」という愛のある警告も含める。
-
-■ 表現のルール
-- 比喩は「生活感」のあるものを使う（例：ハンマーではなく「鉛を飲み込んだような重さ」「冷え切った指先」）。
-- 文末は「〜だよね」「〜なんだよ」「〜してみようか」など、柔らかく語りかける口調。
+■ 文章のトーン
+- 地に足のついた、具体的で実用的な言葉を選ぶ。
+- 「辛いよね」で終わらせず、「辛いのは脳の誤作動だよ。修正できるよ」と希望を論理で示す。
+- 読んだ後に「感動した」ではなく「やるべきことが分かった」と思わせる。
 """
 
-# M4: 参謀プロンプト
 def get_m4_prompt(p_name, p_goal, p_domain):
     return f"""
     あなたはプロジェクト『{p_name}』の戦略パートナーです。
@@ -160,47 +155,45 @@ def get_m4_prompt(p_name, p_goal, p_domain):
     - 感情論ではなく、ビジネスとして冷静な判断をしつつ、Ren様に寄り添った口調で提案してください。
     """
 
-# M1: SNSプロンプト
 def get_m1_prompt(p_name, p_goal):
     return f"""
-    あなたは『{p_name}』のSNS運用担当（中の人）です。
+    あなたは『{p_name}』のSNS運用担当です。
     {STYLE_GUIDE}
     【役割】
-    TLに流れてきたら思わず「これ私のことだ」と手が止まるポストを作成してください。
+    TLに流れてきた時、読者が「私の悩みの答えがここにある」と感じる有益なポストを作成してください。
     【出力要件】
     - 3案作成（各120〜140文字）。
-    - ターゲットの女性が「この人は私の痛みをわかってくれる」と感じる独り言のようなトーンで。
-    - キラキラした言葉は不要。深夜のリアルな感情を言語化して。
+    - ただの共感ポエムにならないように注意。「共感」は入り口にし、「気付き（解決のヒント）」を必ず入れること。
     """
 
-# M2: 記事制作プロンプト
 def get_m2_prompt(p_name, p_goal):
     return f"""
     あなたは『{p_name}』の編集担当です。
     {STYLE_GUIDE}
     【役割】
-    女性読者が没入できる記事構成・執筆を行います。
+    読者が「なるほど、そうだったのか」と納得し、行動したくなる記事構成・執筆を行います。
     【構成案のルール】
     - 見出し5〜10個。
-    - 読み手が「そうそう、そうなの！」と頷きながら読み進められるストーリー構成。
+    - 感情的なストーリーだけでなく、論理的な解説（なぜ依存してしまうのか等）をしっかり組み込む。
     """
 
-# M3: セールスプロンプト
 def get_m3_prompt(p_name, p_goal):
     return f"""
-    あなたは「女性の心に寄り添う」セールスライターです。
+    あなたは「解決策を提示する」セールスライターです。
     {STYLE_GUIDE}
     
     【重要ミッション】
-    読み手が涙を流しながら「やっとわかってくれる人に出会えた」と感じる、2000文字級のレターを書いてください。
+    読み手が「このnoteなら、今の苦しい状況を本当に変えられるかもしれない」と確信できる、2000文字級のレターを書いてください。
     
     【禁止事項】
-    - 男性が女性を口説くようなロマンチックな表現。
-    - 「君」「僕」という一人称・二人称（「あなた」「私」を使うこと）。
-    - 偉そうな説教。
+    - 雰囲気だけの詩的な文章。
+    - 「魔法のように変わる」といった根拠のない約束。
     
-    【構成】
-    ProblemからActionまで、同じ傷を持つ女性同士の対話として書ききってください。
+    【構成 (Counselor's PASONA)】
+    1. **Problem**: 現状の辛さを描写するが、悲劇のヒロインにはさせない。「それはあなたのせいではなく、思考のクセです」と定義する。
+    2. **Affinity**: 「私も同じ道を通り、メソッドを使って抜け出しました」と実証性を提示。
+    3. **Solution**: このnoteが提供する具体的な解決メソッド（ワークや考え方）の一部をチラ見せする。
+    4. **Action**: 感情的な煽りではなく、「今ここで決断すれば、明日の朝はこう変わる」と論理的なベネフィットで背中を押す。
     """
 
 # --- 5. メイン処理 ---
@@ -219,7 +212,7 @@ client = None
 if api_key:
     client = OpenAI(api_key=api_key)
 
-# 共通チャット機能（改行対応UIに変更）
+# 共通チャット機能（送信後クリア & カウンセラーモード）
 def render_chat(module_name, system_prompt):
     if not client:
         st.warning("👈 APIキーを入力してください")
@@ -230,38 +223,35 @@ def render_chat(module_name, system_prompt):
     if session_key not in st.session_state:
         st.session_state[session_key] = [{"role": "system", "content": system_prompt}]
         greeting = "起動しました。"
-        if module_name == "M3": greeting = f"セールスライター（v1.7: Sisterhood Mode）起動。女性同士の共感レターを書きます。"
+        if module_name == "M3": greeting = f"セールスライター（v1.8: Counselor Mode）起動。解決策を提示するレターを書きます。"
         st.session_state[session_key].append({"role": "assistant", "content": greeting})
 
-    # チャット履歴の表示
     for msg in st.session_state[session_key]:
         if msg["role"] != "system":
             with st.chat_message(msg["role"]):
                 st.write(msg["content"])
 
-    # --- 新しい入力フォーム (Enterで改行、ボタンで送信) ---
     st.markdown("---")
-    with st.form(key=f"input_form_{module_name}"):
-        user_input = st.text_area("指示を入力 (Enterで改行、Command+Enter または下のボタンで送信)", height=150)
+    with st.form(key=f"input_form_{module_name}", clear_on_submit=True):
+        user_input = st.text_area("指示を入力 (Enterで改行、送信ボタンで実行)", height=150)
         submit_button = st.form_submit_button("送信する")
 
     if submit_button and user_input:
-        # ユーザーの入力を表示に追加
         st.session_state[session_key].append({"role": "user", "content": user_input})
         
-        # 思考プロセス（女性目線での推敲）
+        # 思考プロセス（カウンセラー視点での推敲）
         thinking_instruction = """
-        【思考プロセス：女性視点チェック】
-        1. ロマンチックすぎないか？男性目線になっていないか？を確認。
-        2. 「同じ痛みを知る女性の先輩」として、リアルな生活感のある言葉を選ぶ。
-        3. 指定文字数（長文）を満たす構成を組む。
+        【思考プロセス：カウンセラー視点チェック】
+        1. 詩的になりすぎていないか？ポエムを排除し、具体的な言葉に置き換える。
+        2. 「共感」だけで終わらず、必ず「分析（なぜ起きるか）」と「解決策（どうするか）」をセットにする。
+        3. 読者を子供扱いせず、自立しようとする女性として尊重するトーンにする。
         """
         
         messages_for_api = st.session_state[session_key].copy()
         messages_for_api[-1]["content"] += thinking_instruction
 
         try:
-            with st.spinner("Owl v1.7 is writing (Sisterhood Mode)..."):
+            with st.spinner("Owl v1.8 is analyzing & writing..."):
                 response = client.chat.completions.create(
                     model="gpt-3.5-turbo",
                     messages=messages_for_api,
@@ -269,9 +259,8 @@ def render_chat(module_name, system_prompt):
                     max_tokens=3000
                 )
             ai_text = response.choices[0].message.content
-            # AIの返答を履歴に追加
             st.session_state[session_key].append({"role": "assistant", "content": ai_text})
-            st.rerun() # 画面更新してチャットを表示
+            st.rerun()
         except Exception as e:
             st.error(f"エラー: {e}")
 
@@ -288,7 +277,7 @@ if menu == "🏠 ダッシュボード":
 
 elif menu == "✅ タスク管理 (ToDo)":
     st.header("Task Management")
-    with st.form("add_task_form"):
+    with st.form("add_task_form", clear_on_submit=True):
         t_title = st.text_input("タスク追加")
         t_prio = st.selectbox("優先度", ["High", "Middle", "Low"])
         if st.form_submit_button("追加"):
@@ -296,7 +285,7 @@ elif menu == "✅ タスク管理 (ToDo)":
             st.rerun()
     df_tasks = get_tasks(current_project_id)
     if not df_tasks.empty:
-        st.data_editor(df_tasks, key="editor_v1_7")
+        st.data_editor(df_tasks, key="editor_v1_8")
         with st.expander("削除"):
             del_id = st.number_input("ID", step=1)
             if st.button("削除"):

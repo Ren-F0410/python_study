@@ -1,21 +1,33 @@
 import streamlit as st
 from openai import OpenAI
 
+# ページ設定
 st.set_page_config(page_title="Athenalink AI", page_icon="🦉")
 st.title("🦉 Athenalink AI Partner")
-st.write("Ren専属メンター『Owl（ロジャー人格）』")
+st.write("Ren専属メンター『Owl』 - Mobile Version")
 
-client = OpenAI(api_key="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")
+# サイドバーでキーを入力させる（安全対策）
+# これにより、GitHubに公開してもキーは漏れません
+api_key = st.sidebar.text_input("OpenAI API Key", type="password")
 
+if not api_key:
+    st.info("👈 サイドバーにAPIキーを入力して、Owlを起動してください")
+    st.stop()
+
+client = OpenAI(api_key=api_key)
+
+# チャット履歴の初期化
 if "messages" not in st.session_state:
     st.session_state.messages = [
-        {"role": "system", "content": "あなたはRenのメンター『Owl』です。ロジャーのように情熱的かつ論理的に、Renの資産1兆円という目標を全力で肯定し、アドバイスしてください。"}
+        {"role": "system", "content": "あなたはRenの参謀『Owl』です。資産1兆円とアテナリンクの成功を目指し、具体的かつ情熱的にアドバイスしてください。"}
     ]
 
+# 会話の表示
 for msg in st.session_state.messages:
     if msg["role"] != "system":
         st.chat_message(msg["role"]).write(msg["content"])
 
+# 入力フォーム
 user_input = st.chat_input("Owlに相談したいことは？")
 
 if user_input:
@@ -31,4 +43,4 @@ if user_input:
         st.chat_message("assistant").write(ai_text)
         st.session_state.messages.append({"role": "assistant", "content": ai_text})
     except Exception as e:
-        st.error(f"エラーが発生しました: {e}")
+        st.error(f"エラー: {e}")

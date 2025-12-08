@@ -5,7 +5,7 @@ from datetime import datetime
 from openai import OpenAI
 
 # --- 1. アプリ設定 & DB初期化 ---
-st.set_page_config(page_title="Owl v1.8", page_icon="🦉", layout="wide")
+st.set_page_config(page_title="Owl v1.9", page_icon="🦉", layout="wide")
 
 DB_PATH = "owl.db"
 
@@ -82,8 +82,8 @@ def delete_task(task_id):
 
 # --- 3. UI構築 ---
 
-st.title("🦉 Athenalink OS v1.8")
-st.caption("Counselor Mode: Analytical & Solution-Oriented")
+st.title("🦉 Athenalink OS v1.9")
+st.caption("Professional Counselor Mode: No Anecdotes, Pure Solution")
 
 # サイドバー：APIキー
 st.sidebar.header("🔑 System Access")
@@ -128,20 +128,22 @@ menu = st.sidebar.radio("Menu", [
     "💰 M3 セールス"
 ])
 
-# --- 4. 脳みそのチューニング (v1.8 Counselor Update) ---
+# --- 4. 脳みそのチューニング (v1.9 Professional Counselor Update) ---
 
 STYLE_GUIDE = """
-【Athenalink Style Guide (Renイズム v4: Counselor)】
+【Athenalink Style Guide (Renイズム v5: Professional Counselor)】
 ■ ペルソナ（書き手の人格）
-- **「冷静かつ温かい、解決志向の女性カウンセラー」**。
-- 詩的な表現や過剰な比喩（「魂の叫び」「千切れるような痛み」など）は控える。
-- 感情に寄り添いつつも、すぐに「なぜその感情が起きるのか（メカニズム）」と「どうすれば治るか（ソリューション）」へ話を展開する。
-- 読者を「患者」扱いせず、「変わろうとしているクライアント」としてリスペクトする。
+- **「クライアントの痛みを深く理解する、プロの女性心理カウンセラー」**。
+- 自分語り（「私もそうでした」）は禁止。主役はあくまで「あなた（読者）」であること。
+- 感情的になりすぎず、しかし冷たくならず、包み込むような落ち着いたトーンで話す。
 
-■ 文章のトーン
-- 地に足のついた、具体的で実用的な言葉を選ぶ。
-- 「辛いよね」で終わらせず、「辛いのは脳の誤作動だよ。修正できるよ」と希望を論理で示す。
-- 読んだ後に「感動した」ではなく「やるべきことが分かった」と思わせる。
+■ ターゲットへの態度
+- 全肯定。「あなたが悪いわけではない」と心理学的根拠をもって伝える。
+- 読者の混乱を整理し、「今何が起きているか」を言語化してあげる役割。
+
+■ 表現のルール
+- 「辛いよね」という共感の後に、必ず「それは〇〇という心の防衛反応なんだよ」と理屈を添える。
+- 具体的な解決策（ソリューション）を提示する際は、自信を持って言い切る。
 """
 
 def get_m4_prompt(p_name, p_goal, p_domain):
@@ -152,7 +154,7 @@ def get_m4_prompt(p_name, p_goal, p_domain):
     目標「{p_goal}」を達成するための具体的タスクを提示してください。
     【出力ルール】
     - タスクは8〜15個。
-    - 感情論ではなく、ビジネスとして冷静な判断をしつつ、Ren様に寄り添った口調で提案してください。
+    - ビジネスとして冷静な判断をしつつ、Ren様に寄り添った口調で提案してください。
     """
 
 def get_m1_prompt(p_name, p_goal):
@@ -160,10 +162,10 @@ def get_m1_prompt(p_name, p_goal):
     あなたは『{p_name}』のSNS運用担当です。
     {STYLE_GUIDE}
     【役割】
-    TLに流れてきた時、読者が「私の悩みの答えがここにある」と感じる有益なポストを作成してください。
+    TLに流れてきた時、読者が「私の心を代弁してくれている」と感じ、救いを求めるポストを作成してください。
     【出力要件】
     - 3案作成（各120〜140文字）。
-    - ただの共感ポエムにならないように注意。「共感」は入り口にし、「気付き（解決のヒント）」を必ず入れること。
+    - 自分の体験談ではなく、「あなたの心の中」を透視したような言葉を選ぶこと。
     """
 
 def get_m2_prompt(p_name, p_goal):
@@ -171,29 +173,29 @@ def get_m2_prompt(p_name, p_goal):
     あなたは『{p_name}』の編集担当です。
     {STYLE_GUIDE}
     【役割】
-    読者が「なるほど、そうだったのか」と納得し、行動したくなる記事構成・執筆を行います。
+    読者が「自分の取り扱い説明書」を読んでいるかのような納得感のある記事構成・執筆を行います。
     【構成案のルール】
     - 見出し5〜10個。
-    - 感情的なストーリーだけでなく、論理的な解説（なぜ依存してしまうのか等）をしっかり組み込む。
+    - 感情のアップダウンだけでなく、「理解→納得→行動」のロジックを通す。
     """
 
 def get_m3_prompt(p_name, p_goal):
     return f"""
-    あなたは「解決策を提示する」セールスライターです。
+    あなたは「解決策を提示する」プロのカウンセラー（セールスライター）です。
     {STYLE_GUIDE}
     
     【重要ミッション】
-    読み手が「このnoteなら、今の苦しい状況を本当に変えられるかもしれない」と確信できる、2000文字級のレターを書いてください。
+    読み手が「この人は私の悩みの正体を知っている。そして治し方も知っている」と確信できる、2000文字級のレターを書いてください。
     
     【禁止事項】
-    - 雰囲気だけの詩的な文章。
-    - 「魔法のように変わる」といった根拠のない約束。
+    - 「私も昔は...」という自分語り（Anecdote）。
+    - 詩的なだけの表現。
     
-    【構成 (Counselor's PASONA)】
-    1. **Problem**: 現状の辛さを描写するが、悲劇のヒロインにはさせない。「それはあなたのせいではなく、思考のクセです」と定義する。
-    2. **Affinity**: 「私も同じ道を通り、メソッドを使って抜け出しました」と実証性を提示。
-    3. **Solution**: このnoteが提供する具体的な解決メソッド（ワークや考え方）の一部をチラ見せする。
-    4. **Action**: 感情的な煽りではなく、「今ここで決断すれば、明日の朝はこう変わる」と論理的なベネフィットで背中を押す。
+    【構成 (Professional PASONA)】
+    1. **Problem (現状の受容)**: 読者の苦しみを詳細に描写する。「今、胸が苦しいですよね。それは当然のことです」と全肯定する。
+    2. **Affinity (専門的共感)**: 自分語りではなく、「多くの女性が同じ沼に陥ります。なぜなら脳には〇〇という性質があるからです」と、悩みを客観化・一般化して安心させる。
+    3. **Solution (解決の提示)**: 感情論ではなく、メソッドとしての解決策を提示する。「このnoteには、その脳のクセを解除する具体的な手順が書かれています」。
+    4. **Action (未来への導き)**: 「一緒に治していきましょう」と、医師が患者に手を差し伸べるような信頼感のあるクロージング。
     """
 
 # --- 5. メイン処理 ---
@@ -212,7 +214,7 @@ client = None
 if api_key:
     client = OpenAI(api_key=api_key)
 
-# 共通チャット機能（送信後クリア & カウンセラーモード）
+# 共通チャット機能（送信後クリア & プロカウンセラーモード）
 def render_chat(module_name, system_prompt):
     if not client:
         st.warning("👈 APIキーを入力してください")
@@ -223,7 +225,7 @@ def render_chat(module_name, system_prompt):
     if session_key not in st.session_state:
         st.session_state[session_key] = [{"role": "system", "content": system_prompt}]
         greeting = "起動しました。"
-        if module_name == "M3": greeting = f"セールスライター（v1.8: Counselor Mode）起動。解決策を提示するレターを書きます。"
+        if module_name == "M3": greeting = f"セールスライター（v1.9: Professional Counselor）起動。自分語りをせず、解決策へ導くレターを書きます。"
         st.session_state[session_key].append({"role": "assistant", "content": greeting})
 
     for msg in st.session_state[session_key]:
@@ -233,77 +235,4 @@ def render_chat(module_name, system_prompt):
 
     st.markdown("---")
     with st.form(key=f"input_form_{module_name}", clear_on_submit=True):
-        user_input = st.text_area("指示を入力 (Enterで改行、送信ボタンで実行)", height=150)
-        submit_button = st.form_submit_button("送信する")
-
-    if submit_button and user_input:
-        st.session_state[session_key].append({"role": "user", "content": user_input})
-        
-        # 思考プロセス（カウンセラー視点での推敲）
-        thinking_instruction = """
-        【思考プロセス：カウンセラー視点チェック】
-        1. 詩的になりすぎていないか？ポエムを排除し、具体的な言葉に置き換える。
-        2. 「共感」だけで終わらず、必ず「分析（なぜ起きるか）」と「解決策（どうするか）」をセットにする。
-        3. 読者を子供扱いせず、自立しようとする女性として尊重するトーンにする。
-        """
-        
-        messages_for_api = st.session_state[session_key].copy()
-        messages_for_api[-1]["content"] += thinking_instruction
-
-        try:
-            with st.spinner("Owl v1.8 is analyzing & writing..."):
-                response = client.chat.completions.create(
-                    model="gpt-3.5-turbo",
-                    messages=messages_for_api,
-                    temperature=0.7,
-                    max_tokens=3000
-                )
-            ai_text = response.choices[0].message.content
-            st.session_state[session_key].append({"role": "assistant", "content": ai_text})
-            st.rerun()
-        except Exception as e:
-            st.error(f"エラー: {e}")
-
-# --- 各画面 ---
-if menu == "🏠 ダッシュボード":
-    st.header(f"Project: {p_name}")
-    st.info(f"**GOAL:** {p_goal}")
-    st.subheader("🔥 今日のタスク")
-    df_tasks = get_tasks(current_project_id)
-    if not df_tasks.empty:
-        st.dataframe(df_tasks)
-    else:
-        st.write("タスクなし")
-
-elif menu == "✅ タスク管理 (ToDo)":
-    st.header("Task Management")
-    with st.form("add_task_form", clear_on_submit=True):
-        t_title = st.text_input("タスク追加")
-        t_prio = st.selectbox("優先度", ["High", "Middle", "Low"])
-        if st.form_submit_button("追加"):
-            add_task(current_project_id, t_title, t_prio)
-            st.rerun()
-    df_tasks = get_tasks(current_project_id)
-    if not df_tasks.empty:
-        st.data_editor(df_tasks, key="editor_v1_8")
-        with st.expander("削除"):
-            del_id = st.number_input("ID", step=1)
-            if st.button("削除"):
-                delete_task(del_id)
-                st.rerun()
-
-elif menu == "🧠 M4 参謀本部":
-    st.header("Strategy Room (M4)")
-    render_chat("M4", get_m4_prompt(p_name, p_goal, p_domain))
-
-elif menu == "📱 M1 SNS集客":
-    st.header("SNS Creator (M1)")
-    render_chat("M1", get_m1_prompt(p_name, p_goal))
-
-elif menu == "📝 M2 記事制作":
-    st.header("Editor Room (M2)")
-    render_chat("M2", get_m2_prompt(p_name, p_goal))
-
-elif menu == "💰 M3 セールス":
-    st.header("Sales Writer (M3)")
-    render_chat("M3", get_m3_prompt(p_name, p_goal))
+        user_input = st.text_area("指示を入力 (Enterで

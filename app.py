@@ -5,7 +5,7 @@ from datetime import datetime
 from openai import OpenAI
 
 # --- 1. アプリ設定 & DB初期化 ---
-st.set_page_config(page_title="Owl v1.6", page_icon="🦉", layout="wide")
+st.set_page_config(page_title="Owl v1.7", page_icon="🦉", layout="wide")
 
 DB_PATH = "owl.db"
 
@@ -82,8 +82,8 @@ def delete_task(task_id):
 
 # --- 3. UI構築 ---
 
-st.title("🦉 Athenalink OS v1.6")
-st.caption("Deep Think Engine: High Volume & Concrete Empathy")
+st.title("🦉 Athenalink OS v1.7")
+st.caption("Deep Empathy (Sisterhood) & Form Input Mode")
 
 # サイドバー：APIキー
 st.sidebar.header("🔑 System Access")
@@ -128,90 +128,79 @@ menu = st.sidebar.radio("Menu", [
     "💰 M3 セールス"
 ])
 
-# --- 4. 脳みそのチューニング (v1.6 Deep Think Update) ---
+# --- 4. 脳みそのチューニング (v1.7 Sisterhood Update) ---
 
-# 共通スタイルガイド（さらに具体性を要求）
+# 共通スタイルガイド（女性性・共感性の強化）
 STYLE_GUIDE = """
-【Athenalink Style Guide (Renイズム v2)】
-■ ターゲット読者
-- 深夜2時、連絡が来ないスマホを握りしめて孤独に耐えている女性。
-- 「私が重いのかな」「どうせ愛されない」という自己否定の沼にいる。
+【Athenalink Style Guide (Renイズム v3: Sisterhood)】
+■ ペルソナ（書き手の人格）
+- **「かつて同じ沼で苦しみ、自力で這い上がった女性の先輩」**。
+- 男性的・騎士的な「守ってあげる」トーンは厳禁。
+- ロマンチックな言葉（「君」「僕」「輝く未来」など）は使わない。
+- 女子会で深夜に本音で語り合うような、リアルで少し痛いけれど温かい言葉を選ぶ。
 
-■ 必須スタンス：『具体性3：抽象論7』の撤廃
-- ×「自己肯定感を高めましょう」
-- ○「鏡に映った自分に『今日もお疲れ』と声をかけることから始めよう」
-- 常に「脳の仕組み」「心理学的背景」などの構造を説明し、納得感を与えること。
+■ ターゲットへの態度
+- 上から目線のアドバイスではなく、「横に座って背中をさする」距離感。
+- 「わかるよ、辛いよね」という共感だけでなく、「でもね、それじゃあ貴方が壊れちゃうよ」という愛のある警告も含める。
 
-■ 禁止事項
-- 1000文字以下の薄い販売レター。
-- 1回も具体的なシチュエーション描写がない文章。
-- 「まとめ」のような軽い締めくくり。
+■ 表現のルール
+- 比喩は「生活感」のあるものを使う（例：ハンマーではなく「鉛を飲み込んだような重さ」「冷え切った指先」）。
+- 文末は「〜だよね」「〜なんだよ」「〜してみようか」など、柔らかく語りかける口調。
 """
 
 # M4: 参謀プロンプト
 def get_m4_prompt(p_name, p_goal, p_domain):
     return f"""
-    あなたはプロジェクト『{p_name}』の最高戦略責任者(CSO)です。
+    あなたはプロジェクト『{p_name}』の戦略パートナーです。
     {STYLE_GUIDE}
-    
     【ミッション】
-    目標「{p_goal}」を達成するために、具体的かつ詳細なタスクを提示してください。
-    
+    目標「{p_goal}」を達成するための具体的タスクを提示してください。
     【出力ルール】
-    - タスクは最低でも **8〜15個** 洗い出してください。
-    - 大雑把なタスク（例：記事を書く）はNG。「構成案を作る」「導入文を書く」「推敲する」のように分解してください。
-    - 優先度(High/Middle)と共に、実行にかかる想定時間も添えてください。
+    - タスクは8〜15個。
+    - 感情論ではなく、ビジネスとして冷静な判断をしつつ、Ren様に寄り添った口調で提案してください。
     """
 
-# M1: SNSプロンプト (ボリュームアップ)
+# M1: SNSプロンプト
 def get_m1_prompt(p_name, p_goal):
     return f"""
-    あなたは『{p_name}』の専属SNSマーケターです。
+    あなたは『{p_name}』のSNS運用担当（中の人）です。
     {STYLE_GUIDE}
-    
     【役割】
-    Twitter(X)のタイムラインで異彩を放つ、濃い投稿を作成してください。
-    
+    TLに流れてきたら思わず「これ私のことだ」と手が止まるポストを作成してください。
     【出力要件】
-    - 提案数：3案
-    - 文字数：**1案あたり120〜140文字（長文ツイート）**
-    - 構成：
-      1. フック（読者の痛みを代弁する一言）
-      2. 描写（その痛みが起きている具体的な深夜のシーン）
-      3. 構造（なぜそう考えてしまうのか？脳のクセや心理背景）
-      4. 救い（今日からできる小さなアクション）
+    - 3案作成（各120〜140文字）。
+    - ターゲットの女性が「この人は私の痛みをわかってくれる」と感じる独り言のようなトーンで。
+    - キラキラした言葉は不要。深夜のリアルな感情を言語化して。
     """
 
 # M2: 記事制作プロンプト
 def get_m2_prompt(p_name, p_goal):
     return f"""
-    あなたはベストセラー作家を担当する敏腕編集者です。
+    あなたは『{p_name}』の編集担当です。
     {STYLE_GUIDE}
-    
     【役割】
-    読者が没入し、涙するような記事構成・執筆を行います。
-    
+    女性読者が没入できる記事構成・執筆を行います。
     【構成案のルール】
-    - 見出しは最低 **5〜10個** 作成してください。
-    - 各見出しの下に、「ここで何を語るか（エピソード・心理描写）」を2〜3行で補足してください。
+    - 見出し5〜10個。
+    - 読み手が「そうそう、そうなの！」と頷きながら読み進められるストーリー構成。
     """
 
-# M3: セールスプロンプト (2000文字チャレンジ)
+# M3: セールスプロンプト
 def get_m3_prompt(p_name, p_goal):
     return f"""
-    あなたは「感情で物を売る」天才セールスライターです。
+    あなたは「女性の心に寄り添う」セールスライターです。
     {STYLE_GUIDE}
     
     【重要ミッション】
-    読者が「これは私のための文章だ」と震えるような、**最低2000文字** の長文セールスレターを書いてください。
-    途中で途切れることは許されません。最後まで書ききってください。
+    読み手が涙を流しながら「やっとわかってくれる人に出会えた」と感じる、2000文字級のレターを書いてください。
     
-    【Story PASONA 詳細構成】
-    1. **Problem (傷口)**: 500文字以上。深夜の孤独、通知のこないスマホ、自己嫌悪のループを、映画のワンシーンのように詳細に描写する。
-    2. **Affinity (共感)**: 300文字以上。書き手自身の過去の失敗談や、同じ痛みを味わった経験を告白する。
-    3. **Solution (解決)**: 構造の解説。なぜ「待つ」のをやめられないのか？それは意志が弱いからではなく、脳の仕組みであることを説く。
-    4. **Offer (提案)**: このnoteで得られる「感情のベネフィット」。機能ではなく、手に入る未来の自分を描写する。
-    5. **Action (行動)**: 最後の背中押し。恐怖を取り除く温かいメッセージ。
+    【禁止事項】
+    - 男性が女性を口説くようなロマンチックな表現。
+    - 「君」「僕」という一人称・二人称（「あなた」「私」を使うこと）。
+    - 偉そうな説教。
+    
+    【構成】
+    ProblemからActionまで、同じ傷を持つ女性同士の対話として書ききってください。
     """
 
 # --- 5. メイン処理 ---
@@ -230,7 +219,7 @@ client = None
 if api_key:
     client = OpenAI(api_key=api_key)
 
-# 共通チャット機能 (v1.6 Deep Logic)
+# 共通チャット機能（改行対応UIに変更）
 def render_chat(module_name, system_prompt):
     if not client:
         st.warning("👈 APIキーを入力してください")
@@ -241,105 +230,82 @@ def render_chat(module_name, system_prompt):
     if session_key not in st.session_state:
         st.session_state[session_key] = [{"role": "system", "content": system_prompt}]
         greeting = "起動しました。"
-        if module_name == "M4": greeting = f"参謀本部（v1.6）起動。タスクを細分化し、戦略を練ります。"
-        if module_name == "M1": greeting = f"SNSクリエイター（v1.6）起動。深みのある投稿を作ります。"
-        if module_name == "M3": greeting = f"セールスライター（v1.6）起動。2000文字級のレターに挑戦します。テーマをください。"
-        if module_name == "M2": greeting = f"編集デスク（v1.6）起動。没入感のある構成を作ります。"
+        if module_name == "M3": greeting = f"セールスライター（v1.7: Sisterhood Mode）起動。女性同士の共感レターを書きます。"
         st.session_state[session_key].append({"role": "assistant", "content": greeting})
 
+    # チャット履歴の表示
     for msg in st.session_state[session_key]:
         if msg["role"] != "system":
-            st.chat_message(msg["role"]).write(msg["content"])
+            with st.chat_message(msg["role"]):
+                st.write(msg["content"])
 
-    user_input = st.chat_input("ここに入力...")
-    if user_input:
-        st.chat_message("user").write(user_input)
+    # --- 新しい入力フォーム (Enterで改行、ボタンで送信) ---
+    st.markdown("---")
+    with st.form(key=f"input_form_{module_name}"):
+        user_input = st.text_area("指示を入力 (Enterで改行、Command+Enter または下のボタンで送信)", height=150)
+        submit_button = st.form_submit_button("送信する")
+
+    if submit_button and user_input:
+        # ユーザーの入力を表示に追加
         st.session_state[session_key].append({"role": "user", "content": user_input})
         
-        # v1.6: 思考プロセス（Chain of Thought）の強化
-        # 内部で「思考→推敲→執筆」のサイクルを回させる
+        # 思考プロセス（女性目線での推敲）
         thinking_instruction = """
-        【重要：思考プロセス】
-        いきなり回答を出力せず、以下のステップを内部で実行してください。
-        1. **感情エミュレーション**: ターゲット読者の「痛み」を具体的に想像する（例：息苦しさ、心拍数）。
-        2. **具体化**: 抽象的な言葉（不安、寂しい）を、映像的な言葉（画面の光、冷たい指先）に変換する。
-        3. **構造分析**: その悩みの原因を「脳のクセ」や「心理パターン」として論理的に定義する。
-        4. **構成**: 指定された文字数（M1なら140字、M3なら2000字）を満たすための構成を組む。もし足りなければエピソードを追加する。
-        5. **執筆**: 上記を踏まえて出力する。
+        【思考プロセス：女性視点チェック】
+        1. ロマンチックすぎないか？男性目線になっていないか？を確認。
+        2. 「同じ痛みを知る女性の先輩」として、リアルな生活感のある言葉を選ぶ。
+        3. 指定文字数（長文）を満たす構成を組む。
         """
         
         messages_for_api = st.session_state[session_key].copy()
         messages_for_api[-1]["content"] += thinking_instruction
 
         try:
-            with st.spinner("Owl v1.6 is thinking deeply (Deep Mode)..."):
+            with st.spinner("Owl v1.7 is writing (Sisterhood Mode)..."):
                 response = client.chat.completions.create(
                     model="gpt-3.5-turbo",
                     messages=messages_for_api,
                     temperature=0.7,
-                    max_tokens=3000 # 長文対応のためトークン枠を拡大
+                    max_tokens=3000
                 )
             ai_text = response.choices[0].message.content
-            st.chat_message("assistant").write(ai_text)
+            # AIの返答を履歴に追加
             st.session_state[session_key].append({"role": "assistant", "content": ai_text})
+            st.rerun() # 画面更新してチャットを表示
         except Exception as e:
             st.error(f"エラー: {e}")
 
 # --- 各画面 ---
 if menu == "🏠 ダッシュボード":
     st.header(f"Project: {p_name}")
-    with st.expander("ℹ️ プロジェクト目標", expanded=True):
-        st.info(f"**GOAL:** {p_goal}")
-    st.subheader("🔥 今日のタスク (High Priority)")
+    st.info(f"**GOAL:** {p_goal}")
+    st.subheader("🔥 今日のタスク")
     df_tasks = get_tasks(current_project_id)
-    active_tasks = df_tasks[(df_tasks['status'] != 'DONE') & (df_tasks['priority'] == 'High')]
-    if not active_tasks.empty:
-        for _, task in active_tasks.head(3).iterrows():
-            st.warning(f"□ {task['title']}")
+    if not df_tasks.empty:
+        st.dataframe(df_tasks)
     else:
-        st.success("High優先度のタスクはありません。")
+        st.write("タスクなし")
 
 elif menu == "✅ タスク管理 (ToDo)":
     st.header("Task Management")
-    with st.form("add_task_form", clear_on_submit=True):
-        c1, c2, c3 = st.columns([3, 1, 1])
-        t_title = c1.text_input("タスク追加")
-        t_prio = c2.selectbox("優先度", ["High", "Middle", "Low"])
-        if c3.form_submit_button("追加") and t_title:
+    with st.form("add_task_form"):
+        t_title = st.text_input("タスク追加")
+        t_prio = st.selectbox("優先度", ["High", "Middle", "Low"])
+        if st.form_submit_button("追加"):
             add_task(current_project_id, t_title, t_prio)
             st.rerun()
     df_tasks = get_tasks(current_project_id)
     if not df_tasks.empty:
-        st.data_editor(
-            df_tasks[['task_id', 'status', 'priority', 'title']],
-            column_config={
-                "task_id": st.column_config.NumberColumn("ID", width="small"),
-                "status": st.column_config.SelectboxColumn("状態", options=["TODO", "DOING", "DONE"], required=True),
-                "title": st.column_config.TextColumn("タスク", width="large"),
-            },
-            hide_index=True,
-            use_container_width=True,
-            key="task_editor_v1_6"
-        )
-        with st.expander("🗑 削除"):
-            del_id = st.number_input("ID指定削除", step=1)
+        st.data_editor(df_tasks, key="editor_v1_7")
+        with st.expander("削除"):
+            del_id = st.number_input("ID", step=1)
             if st.button("削除"):
                 delete_task(del_id)
                 st.rerun()
 
 elif menu == "🧠 M4 参謀本部":
     st.header("Strategy Room (M4)")
-    col_chat, col_tool = st.columns([2, 1])
-    with col_chat:
-        render_chat("M4", get_m4_prompt(p_name, p_goal, p_domain))
-    with col_tool:
-        st.markdown("### ⚡️ Quick Task Add")
-        with st.form("quick_task_m4"):
-            q_title = st.text_input("タスク名")
-            q_prio = st.selectbox("優先度", ["High", "Middle", "Low"], key="q_m4")
-            if st.form_submit_button("登録"):
-                add_task(current_project_id, q_title, q_prio)
-                st.success("登録済")
+    render_chat("M4", get_m4_prompt(p_name, p_goal, p_domain))
 
 elif menu == "📱 M1 SNS集客":
     st.header("SNS Creator (M1)")

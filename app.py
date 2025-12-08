@@ -15,13 +15,15 @@ if not api_key:
 
 client = OpenAI(api_key=api_key)
 
+# モード選択（M3を追加！）
 mode = st.sidebar.selectbox("モード選択", [
     "📈 戦略会議 (M4)",
     "📱 SNS投稿生成 (M1)",
+    "💰 セールスライティング (M3)",
     "💬 通常チャット"
 ])
 
-# --- コンテキスト定義 (ここを強化！) ---
+# --- コンテキスト定義 ---
 
 # M4: 参謀モード
 STRATEGY_CONTEXT = """
@@ -31,32 +33,35 @@ Ren様の目標（月商100万→1000万→資産1兆円）を前提に、冷徹
 優先順位：1.恋愛noteの収益化、2.Owl開発、3.資産化。
 """
 
-# M1: SNSモード（学習データを強化）
+# M1: SNSモード
 SNS_CONTEXT = """
 【役割】
 あなたは恋愛系インフルエンサーの専属ライターです。
-「自己否定」「沼」「執着」に悩む女性に寄り添い、光を見せる投稿を作成してください。
+ターゲット：恋愛で「自己否定」「沼」「執着」に悩む女性。
 
 【Ren流・発信の型】
-1. **共感フック**: 「〜だよね」「〜してない？」と読者の痛みに触れる。
-2. **寄り添い**: 「わかるよ」「辛いよね」と一度受け入れる。
-3. **視点の転換**: 「でもね、実は〜なんだ」「大事なのは〜すること」と新しい価値観を提示する。
-4. **背中押し**: 「大丈夫、変われるよ」「応援してる」で締める。
+1. 共感フック（〜だよね）
+2. 寄り添い（わかるよ）
+3. 視点の転換（でも実は〜なんだ）
+4. 背中押し（大丈夫、変われるよ）
+"""
 
-【禁止事項】
-- 上から目線の説教（×すべき、×しなさい）
-- 硬いビジネス用語
-- 「皆さん」という呼びかけ（「あなた」と呼ぶこと）
+# M3: セールスモード（新規追加！）
+SALES_CONTEXT = """
+【役割】
+あなたは「人の心を動かし、行動させる」プロのセールスライターです。
+Ren様の「恋愛note」を、悩める女性に届けるための魅力的な「販売ページの文章」や「強力な告知文」を作成してください。
 
-【良い投稿例（これを真似て！）】
-例1：
-彼の連絡が来なくて、スマホばかり見ちゃう夜あるよね。わかるよ、胸がギュッとなる感じ。でもね、彼からの連絡＝あなたの価値、じゃないんだよ。今日はスマホを置いて、温かいお茶でも飲んで、自分をハグしてあげよう。あなたがあなたを大切にすれば、世界も優しくなるから。大丈夫。
-
-例2：
-「私なんてどうせ愛されない」って思ってない？それ、脳が作り出したただの幻だよ。過去に何があったとしても、今のあなたの価値は1ミリも減ってない。まずは「私、よく頑張ってるね」って声に出してみて。自分を愛する練習、今日から一緒に始めよう。
+【セールスの型 (PASONAの法則)】
+1. **Problem (問題)**: 読者の痛み・悩みを明確に言い当てる。「〜で辛い思いをしてませんか？」
+2. **Affinity (親近感)**: 「私もかつてはそうでした」と寄り添い、敵ではないことを示す。
+3. **Solution (解決策)**: その悩みの唯一の解決策が「このnote」であることを示す。
+4. **Offer (提案)**: 具体的に何が得られるか？（ベネフィット）を提示する。
+5. **Action (行動)**: 「今すぐ読んで、新しい自分に出会ってください」と背中を押す。
 
 【出力】
-ユーザーからテーマが渡されたら、上記の「型」と「例」を参考に、異なるニュアンスの投稿案を3つ作成してください。
+ユーザーから「商品のテーマ」や「訴求ポイント」が渡されたら、
+この法則に基づいた、読み手の感情を揺さぶる文章を作成してください。
 """
 
 # --- メイン処理 ---
@@ -67,25 +72,34 @@ if "messages" not in st.session_state:
 if "last_mode" not in st.session_state:
     st.session_state.last_mode = mode
 
+# モード切り替え時の処理
 if st.session_state.last_mode != mode:
     st.session_state.messages = []
     st.session_state.last_mode = mode
+    
     if mode == "📈 戦略会議 (M4)":
         st.session_state.messages.append({"role": "system", "content": STRATEGY_CONTEXT})
-        st.session_state.messages.append({"role": "assistant", "content": "参謀モード起動。戦略に基づき指示をください。"})
+        st.session_state.messages.append({"role": "assistant", "content": "参謀モード起動。戦略的判断を下します。"})
     elif mode == "📱 SNS投稿生成 (M1)":
         st.session_state.messages.append({"role": "system", "content": SNS_CONTEXT})
-        st.session_state.messages.append({"role": "assistant", "content": "SNSクリエイターモード起動。「書き方の型」を学習しました。今日のテーマを教えてください。"})
+        st.session_state.messages.append({"role": "assistant", "content": "SNSクリエイターモード起動。今日のテーマは何ですか？"})
+    elif mode == "💰 セールスライティング (M3)":
+        st.session_state.messages.append({"role": "system", "content": SALES_CONTEXT})
+        st.session_state.messages.append({"role": "assistant", "content": "セールスライターモード起動。noteの「タイトル」や「売りたいポイント」を教えてください。最強のセールスレターを書きます。"})
     else:
         st.session_state.messages.append({"role": "system", "content": "あなたは優秀なアシスタントです。"})
         st.session_state.messages.append({"role": "assistant", "content": "通常モードです。"})
 
 if not st.session_state.messages:
+    # 初回メッセージ設定（万が一空の場合）
     if mode == "📈 戦略会議 (M4)":
         st.session_state.messages.append({"role": "system", "content": STRATEGY_CONTEXT})
     elif mode == "📱 SNS投稿生成 (M1)":
         st.session_state.messages.append({"role": "system", "content": SNS_CONTEXT})
+    elif mode == "💰 セールスライティング (M3)":
+        st.session_state.messages.append({"role": "system", "content": SALES_CONTEXT})
 
+# 会話表示
 for msg in st.session_state.messages:
     if msg["role"] != "system":
         st.chat_message(msg["role"]).write(msg["content"])

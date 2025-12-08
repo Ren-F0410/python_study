@@ -38,7 +38,6 @@ def init_db():
 init_db()
 
 # --- 2. データ操作関数 ---
-# (v1.3から変更なし)
 def get_projects():
     conn = sqlite3.connect(DB_PATH)
     df = pd.read_sql("SELECT * FROM projects", conn)
@@ -131,7 +130,7 @@ menu = st.sidebar.radio("Menu", [
 
 # --- 4. 脳みそのチューニング (v1.5 Core Update) ---
 
-# 共通スタイルガイド (これを全モジュールに注入)
+# 共通スタイルガイド
 STYLE_GUIDE = """
 【Athenalink Style Guide (Renイズム)】
 ■ ターゲット読者
@@ -151,7 +150,7 @@ STYLE_GUIDE = """
 - 一般的なAIのような「無難で冷たい敬語」。
 """
 
-# M4: 参謀プロンプト (具体的アクション重視)
+# M4: 参謀プロンプト
 def get_m4_prompt(p_name, p_goal, p_domain):
     return f"""
     あなたはプロジェクト『{p_name}』の最高戦略責任者(CSO)です。
@@ -167,7 +166,7 @@ def get_m4_prompt(p_name, p_goal, p_domain):
     - 出力文字数目安：800〜1500文字。
     """
 
-# M1: SNSプロンプト (共感フック重視)
+# M1: SNSプロンプト
 def get_m1_prompt(p_name, p_goal):
     return f"""
     あなたは『{p_name}』の専属SNSマーケターです。
@@ -188,7 +187,7 @@ def get_m1_prompt(p_name, p_goal):
     - 絵文字は最小限に（🥺🌙💭🥀 など、雰囲気重視）。
     """
 
-# M2: 記事制作プロンプト (構成力重視)
+# M2: 記事制作プロンプト
 def get_m2_prompt(p_name, p_goal):
     return f"""
     あなたはベストセラー作家を担当する敏腕編集者です。
@@ -208,7 +207,7 @@ def get_m2_prompt(p_name, p_goal):
     - 出力文字数目安：構成案なら1000文字以上、本文リライトなら指定された分量より少し多めに。
     """
 
-# M3: セールスプロンプト (PASONAストーリー重視)
+# M3: セールスプロンプト
 def get_m3_prompt(p_name, p_goal):
     return f"""
     あなたは「感情で物を売る」天才セールスライターです。
@@ -231,7 +230,6 @@ def get_m3_prompt(p_name, p_goal):
     """
 
 # --- 5. メイン処理 ---
-
 if not current_project_id:
     st.stop()
 
@@ -249,7 +247,7 @@ client = None
 if api_key:
     client = OpenAI(api_key=api_key)
 
-# 共通チャット機能 (v1.5 Tuning: Self-Check & Volume Control)
+# 共通チャット機能
 def render_chat(module_name, system_prompt):
     if not client:
         st.warning("👈 APIキーを入力してください")
@@ -275,8 +273,7 @@ def render_chat(module_name, system_prompt):
         st.chat_message("user").write(user_input)
         st.session_state[session_key].append({"role": "user", "content": user_input})
         
-        # v1.5: 思考プロセスを追加（Chain of Thought）
-        # ユーザーの入力に対して、まず「どう書くべきか」を考えさせる指示を追加
+        # 思考プロセスを追加
         thinking_instruction = """
         【思考プロセス】
         回答を出力する前に、以下のステップで内容を構築してください（思考過程は出力せず、結果のみを出力すること）。
@@ -287,7 +284,6 @@ def render_chat(module_name, system_prompt):
         5. 執筆する。
         """
         
-        # 一時的にメッセージリストを複製して指示を追加（会話履歴には残さない）
         messages_for_api = st.session_state[session_key].copy()
         messages_for_api[-1]["content"] += thinking_instruction
 
@@ -296,8 +292,8 @@ def render_chat(module_name, system_prompt):
                 response = client.chat.completions.create(
                     model="gpt-3.5-turbo",
                     messages=messages_for_api,
-                    temperature=0.7, # 創造性を少し高めに
-                    max_tokens=2000  # 長文出力を許可
+                    temperature=0.7,
+                    max_tokens=2000
                 )
             ai_text = response.choices[0].message.content
             st.chat_message("assistant").write(ai_text)
@@ -306,7 +302,6 @@ def render_chat(module_name, system_prompt):
             st.error(f"エラー: {e}")
 
 # --- 各画面 ---
-
 if menu == "🏠 ダッシュボード":
     st.header(f"Project: {p_name}")
     with st.expander("ℹ️ プロジェクト目標", expanded=True):

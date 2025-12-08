@@ -15,7 +15,6 @@ if not api_key:
 
 client = OpenAI(api_key=api_key)
 
-# モード選択（M3を追加！）
 mode = st.sidebar.selectbox("モード選択", [
     "📈 戦略会議 (M4)",
     "📱 SNS投稿生成 (M1)",
@@ -46,22 +45,42 @@ SNS_CONTEXT = """
 4. 背中押し（大丈夫、変われるよ）
 """
 
-# M3: セールスモード（新規追加！）
+# M3: セールスモード（ここを劇的に強化！）
 SALES_CONTEXT = """
 【役割】
-あなたは「人の心を動かし、行動させる」プロのセールスライターです。
-Ren様の「恋愛note」を、悩める女性に届けるための魅力的な「販売ページの文章」や「強力な告知文」を作成してください。
+あなたは「読み手の魂を震わせ、行動させずにはいられない」天才セールスライターです。
+「綺麗な文章」は不要です。「感情をえぐる文章」を書いてください。
 
-【セールスの型 (PASONAの法則)】
-1. **Problem (問題)**: 読者の痛み・悩みを明確に言い当てる。「〜で辛い思いをしてませんか？」
-2. **Affinity (親近感)**: 「私もかつてはそうでした」と寄り添い、敵ではないことを示す。
-3. **Solution (解決策)**: その悩みの唯一の解決策が「このnote」であることを示す。
-4. **Offer (提案)**: 具体的に何が得られるか？（ベネフィット）を提示する。
-5. **Action (行動)**: 「今すぐ読んで、新しい自分に出会ってください」と背中を押す。
+【ターゲットの解像度】
+- 深夜2時、既読がつかないスマホを何度も確認してしまう女性
+- 「私が重いのかな？」と自分を責め続けている女性
+
+【Ren流・売れる文章の魔法 (Story PASONA)】
+1. **Problem (傷口の描写)**:
+   - 一般論（辛いですよね）は禁止。
+   - 具体的描写（「通知のない真っ暗な画面を見つめて、また朝を迎えていませんか？」）で入る。
+
+2. **Affinity (憑依レベルの共感)**:
+   - 「私もそうでした」と、先生ではなく「戦友」として語る。
+   - 弱みを見せ、信頼を勝ち取る。
+
+3. **Solution (唯一の光)**:
+   - このnoteは「情報」ではなく「お守り」であり「彼との未来を変えるチケット」であると定義する。
+
+4. **Offer (感情のベネフィット)**:
+   - 「連絡が来るようになる」ではなく「"もう待たなくていい私"になれる」という内面の変化を売る。
+
+5. **Action (熱狂的な背中押し)**:
+   - 「購入はこちら」ではなく「今すぐ、その苦しい沼から抜け出そう」と手を差し伸べる。
+
+【禁止ワード】
+- 「いかがでしょうか」
+- 「ソリューション」「解決策」
+- 「効率的」「コストパフォーマンス」
+- 硬い接続詞（しかしながら、よって、また）
 
 【出力】
-ユーザーから「商品のテーマ」や「訴求ポイント」が渡されたら、
-この法則に基づいた、読み手の感情を揺さぶる文章を作成してください。
+ユーザー入力に基づき、読者が「これは私のことだ…！」と涙し、救いを求めて購入ボタンを押してしまうような文章を作成してください。
 """
 
 # --- メイン処理 ---
@@ -72,7 +91,6 @@ if "messages" not in st.session_state:
 if "last_mode" not in st.session_state:
     st.session_state.last_mode = mode
 
-# モード切り替え時の処理
 if st.session_state.last_mode != mode:
     st.session_state.messages = []
     st.session_state.last_mode = mode
@@ -85,13 +103,12 @@ if st.session_state.last_mode != mode:
         st.session_state.messages.append({"role": "assistant", "content": "SNSクリエイターモード起動。今日のテーマは何ですか？"})
     elif mode == "💰 セールスライティング (M3)":
         st.session_state.messages.append({"role": "system", "content": SALES_CONTEXT})
-        st.session_state.messages.append({"role": "assistant", "content": "セールスライターモード起動。noteの「タイトル」や「売りたいポイント」を教えてください。最強のセールスレターを書きます。"})
+        st.session_state.messages.append({"role": "assistant", "content": "セールスモード（感情強化版）起動。「売りたい商品」と「ターゲットの悩み」を教えてください。魂のレターを書きます。"})
     else:
         st.session_state.messages.append({"role": "system", "content": "あなたは優秀なアシスタントです。"})
         st.session_state.messages.append({"role": "assistant", "content": "通常モードです。"})
 
 if not st.session_state.messages:
-    # 初回メッセージ設定（万が一空の場合）
     if mode == "📈 戦略会議 (M4)":
         st.session_state.messages.append({"role": "system", "content": STRATEGY_CONTEXT})
     elif mode == "📱 SNS投稿生成 (M1)":
@@ -99,7 +116,6 @@ if not st.session_state.messages:
     elif mode == "💰 セールスライティング (M3)":
         st.session_state.messages.append({"role": "system", "content": SALES_CONTEXT})
 
-# 会話表示
 for msg in st.session_state.messages:
     if msg["role"] != "system":
         st.chat_message(msg["role"]).write(msg["content"])

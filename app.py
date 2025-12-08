@@ -18,23 +18,41 @@ if not api_key:
 client = OpenAI(api_key=api_key)
 
 # モード選択
-mode = st.sidebar.selectbox("モード選択", ["💬 通常チャット", "📈 戦略会議 (M4)"])
+mode = st.sidebar.selectbox("モード選択", [
+    "📈 戦略会議 (M4)",
+    "📱 SNS投稿生成 (M1)",
+    "💬 通常チャット"
+])
 
-# --- 戦略データ（Renさんのゴール） ---
+# --- コンテキスト定義 ---
+
+# M4: 参謀モード（戦略）
 STRATEGY_CONTEXT = """
-【アテナリンク戦略データ】
-■ 数値目標
-- 6ヶ月後：月商100万円（恋愛事業）
-- 1年後：月商1,000万円
-- 30年後：個人資産1兆円
-
-■ 直近のミッション
-- 恋愛note第1弾の完成と販売開始
-- Owl開発（v1.0実戦投入）
-- X（Twitter）からの集客導線確立
-
+【役割】
 あなたはアテナリンクの参謀『Owl』です。
-この目標を前提に、具体的かつ論理的に、時には厳しくアドバイスしてください。
+Ren様の目標（月商100万→1000万→資産1兆円）を前提に、冷徹かつ情熱的なアドバイスを行ってください。
+優先順位：1.恋愛noteの収益化、2.Owl開発、3.資産化。
+"""
+
+# M1: SNSモード（X/Twitter集客）
+SNS_CONTEXT = """
+【役割】
+あなたはプロのSNSマーケター兼コピーライターです。
+「恋愛で自己否定してしまう女性」「沼から抜け出せない人」に深く刺さる、共感度の高いX（Twitter）のポストを作成してください。
+
+【ターゲット】
+- 20代〜30代女性
+- 恋愛で不安になりやすい、彼氏の連絡を待ってしまう
+- 「自分軸」を取り戻したいと願っている
+
+【投稿スタイル】
+- 寄り添い（共感）から入り、気づき（教育）で終わる。
+- 説教臭くならず、同じ目線で語りかける。
+- 140字ギリギリの長文ツイートや、箇条書きスタイルなど、バリエーションを持たせる。
+- 絵文字は適度に使用（🥺✨🌱など）。
+
+【出力】
+ユーザーから「テーマ」が渡されたら、異なる切り口の投稿案を3つ作成してください。
 """
 
 # --- メイン処理 ---
@@ -43,15 +61,30 @@ STRATEGY_CONTEXT = """
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# 「戦略会議」モードに切り替えた時、最初にコンテキストを注入する
-if mode == "📈 戦略会議 (M4)" and not st.session_state.messages:
-    st.session_state.messages.append({"role": "system", "content": STRATEGY_CONTEXT})
-    initial_greeting = "アテナリンク参謀モードを起動しました。現状の戦略データを読み込んでいます。\n\n「今週の計画」や「次のアクション」について指示をください。"
-    st.session_state.messages.append({"role": "assistant", "content": initial_greeting})
+# 前回のモードを保存しておき、切り替わったら履歴をリセットする処理
+if "last_mode" not in st.session_state:
+    st.session_state.last_mode = mode
 
-# 「通常チャット」モードの初期化
-elif mode == "💬 通常チャット" and not st.session_state.messages:
-    st.session_state.messages.append({"role": "system", "content": "あなたは優秀なアシスタントです。"})
+if st.session_state.last_mode != mode:
+    st.session_state.messages = []
+    st.session_state.last_mode = mode
+    # モード切り替え時の初期メッセージ設定
+    if mode == "📈 戦略会議 (M4)":
+        st.session_state.messages.append({"role": "system", "content": STRATEGY_CONTEXT})
+        st.session_state.messages.append({"role": "assistant", "content": "参謀モード起動。現状の戦略を踏まえ、次の手を打ちましょう。指示をください。"})
+    elif mode == "📱 SNS投稿生成 (M1)":
+        st.session_state.messages.append({"role": "system", "content": SNS_CONTEXT})
+        st.session_state.messages.append({"role": "assistant", "content": "SNSクリエイターモード起動。今日の「発信テーマ」や「伝えたい想い」を教えてください。3つの投稿案を作成します。"})
+    else:
+        st.session_state.messages.append({"role": "system", "content": "あなたは優秀なAIアシスタントです。"})
+        st.session_state.messages.append({"role": "assistant", "content": "通常モードです。何かお手伝いすることはありますか？"})
+
+# 初回起動時のメッセージセット（履歴が空の場合のみ）
+if not st.session_state.messages:
+    if mode == "📈 戦略会議 (M4)":
+        st.session_state.messages.append({"role": "system", "content": STRATEGY_CONTEXT})
+    elif mode == "📱 SNS投稿生成 (M1)":
+        st.session_state.messages.append({"role": "system", "content": SNS_CONTEXT})
 
 # 会話の表示
 for msg in st.session_state.messages:
@@ -62,26 +95,22 @@ for msg in st.session_state.messages:
 user_input = st.chat_input("ここに入力...")
 
 if user_input:
-    # ユーザーの入力を表示・追加
     st.chat_message("user").write(user_input)
     st.session_state.messages.append({"role": "user", "content": user_input})
     
-    # AIの応答生成
     try:
         response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=st.session_state.messages
         )
         ai_text = response.choices[0].message.content
-        
-        # AIの応答を表示・追加
         st.chat_message("assistant").write(ai_text)
         st.session_state.messages.append({"role": "assistant", "content": ai_text})
         
     except Exception as e:
-        st.error(f"エラーが発生しました: {e}")
+        st.error(f"エラー: {e}")
 
-# 履歴リセットボタン
+# リセットボタン
 if st.sidebar.button("🗑 会話をリセット"):
     st.session_state.messages = []
     st.rerun()

@@ -85,9 +85,16 @@ def delete_task(task_id):
 
 st.title("🦉 Athenalink OS v1.3")
 
-# サイドバー
+# サイドバー：APIキー (Secrets対応版)
 st.sidebar.header("🔑 System Access")
-api_key = st.sidebar.text_input("OpenAI API Key", type="password")
+
+# 金庫(Secrets)にキーがあるか確認
+if "OPENAI_API_KEY" in st.secrets:
+    api_key = st.secrets["OPENAI_API_KEY"]
+    st.sidebar.success("✅ Auto-Login Active")
+else:
+    # なければ手動入力
+    api_key = st.sidebar.text_input("OpenAI API Key", type="password")
 
 st.sidebar.header("📂 Project Selector")
 df_projects = get_projects()
@@ -220,7 +227,7 @@ elif menu == "✅ タスク管理 (ToDo)":
             },
             hide_index=True,
             use_container_width=True,
-            key="task_editor_v2" # keyを変更してリセット
+            key="task_editor_v2" 
         )
         with st.expander("🗑 削除ツール"):
             del_id = st.number_input("IDを指定して削除", step=1)
@@ -233,7 +240,6 @@ elif menu == "✅ タスク管理 (ToDo)":
 elif menu == "🧠 M4 参謀本部":
     st.header("Strategy Room (M4)")
     
-    # === ここが統合のキモ！プロジェクト情報を注入 ===
     m4_prompt = f"""
     あなたはプロジェクト『{p_name}』の参謀です。
     【プロジェクト目標】{p_goal}
@@ -243,7 +249,6 @@ elif menu == "🧠 M4 参謀本部":
     タスクを提案する際は、優先度（High/Middle/Low）も示唆してください。
     """
     
-    # 画面分割：左にチャット、右にタスク登録
     col_chat, col_tool = st.columns([2, 1])
     
     with col_chat:

@@ -10,7 +10,7 @@ import io
 import re
 
 # --- 1. アプリ設定 & デザイン ---
-st.set_page_config(page_title="Owl v3.6.4", page_icon="🦉", layout="wide")
+st.set_page_config(page_title="Owl v3.6.5", page_icon="🦉", layout="wide")
 
 # カラーパレット
 COLOR_BG_MAIN = "#0B1020"
@@ -33,6 +33,9 @@ st.markdown(f"""
     .chat-user {{ background: {COLOR_BG_CARD}; padding: 15px; border-radius: 8px; margin-bottom: 10px; border: 1px solid {COLOR_BORDER}; }}
     .chat-owl {{ background: transparent; padding: 15px; margin-bottom: 10px; border-bottom: 1px solid {COLOR_BORDER}; }}
     .login-box {{ max-width: 400px; margin: 100px auto; padding: 40px; background: {COLOR_BG_CARD}; border-radius: 12px; text-align: center; }}
+    
+    /* URL要約表示用のスタイル */
+    .url-summary {{ background: #1F2937; padding: 15px; border-left: 4px solid {COLOR_ACCENT}; border-radius: 4px; margin-top: 10px; font-size: 0.9rem; }}
 </style>
 """, unsafe_allow_html=True)
 
@@ -111,12 +114,10 @@ def get_knowledge_summary():
     conn.close()
     return df
 
-# URL抽出
 def extract_url(text):
     urls = re.findall(r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+', text)
     return urls[0] if urls else None
 
-# URL解析 (強化版)
 def fetch_url_content(url):
     headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'}
     try:
@@ -124,10 +125,9 @@ def fetch_url_content(url):
         response.encoding = response.apparent_encoding
         soup = BeautifulSoup(response.text, 'html.parser')
         
-        # 判定: XやGoogleなどのブロッカー
         page_text = soup.get_text()
         if "JavaScript" in page_text and "enable" in page_text:
-            return "Block", "このサイト（X/Twitter等）はプログラムからのアクセスをブロックしています。内容を読み取るには、スクリーンショットを撮って『画像分析』機能を使ってください。"
+            return "Block", "このサイトはプログラムからのアクセスをブロックしています。スクショを撮って添付してください。"
             
         title = soup.title.string if soup.title else url
         for script in soup(["script", "style"]):
@@ -141,6 +141,17 @@ def fetch_url_content(url):
         return title, text[:8000]
     except Exception as e:
         return "Error", f"取得失敗: {str(e)}"
+
+# AIによる要約機能
+def summarize_text(client, text):
+    response = client.chat.completions.create(
+        model="gpt-3.5-turbo",
+        messages=[
+            {"role": "system", "content": "以下のテキストを日本語で簡潔に要約してください。重要なポイントを3箇条書きでまとめてください。"},
+            {"role": "user", "content": text[:3000]} # 長すぎるとエラーになるのでカット
+        ]
+    )
+    return response.choices[0].message.content
 
 def analyze_image(client, image_file):
     image_file.seek(0)
@@ -158,7 +169,7 @@ def generate_image(client, prompt):
 # --- 3. ログイン ---
 if 'user' not in st.session_state: st.session_state['user'] = None
 if not st.session_state['user']:
-    st.markdown(f"<div class='login-box'><h1>🦉 Owl v3.6.4</h1><p>Athenalink Operation System</p></div>", unsafe_allow_html=True)
+    st.markdown(f"<div class='login-box'><h1>🦉 Owl v3.6.5</h1><p>Athenalink Operation System</p></div>", unsafe_allow_html=True)
     _, c2, _ = st.columns([1,1,1])
     with c2:
         with st.form("login"):
@@ -172,7 +183,7 @@ current_user = st.session_state['user']
 user_name = get_user_name(current_user)
 
 # --- 4. レイアウト & モジュール ---
-st.sidebar.markdown(f"### 🦉 Owl v3.6.4")
+st.sidebar.markdown(f"### 🦉 Owl v3.6.5")
 st.sidebar.markdown(f"<p style='color:#9CA3AF;'>User: {user_name}</p>", unsafe_allow_html=True)
 st.sidebar.markdown("---")
 menu = st.sidebar.radio("MENU", ["Dashboard", "Team Chat", "M4 Strategy", "M1 SNS", "M2 Editor", "M3 Sales"])
@@ -196,18 +207,6 @@ if st.sidebar.button("Logout"):
     st.session_state['user'] = None
     st.rerun()
 
-# --- インプット拡張 (画像) ---
-if menu != "Dashboard" and menu != "Team Chat":
-    st.sidebar.markdown("### 👁️ Image Input")
-    up_img = st.sidebar.file_uploader("Upload Image", type=["jpg", "png"])
-    if up_img and client:
-        if st.sidebar.button("Analyze & Learn"):
-            with st.spinner("Analyzing..."):
-                content = analyze_image(client, up_img)
-                save_knowledge("image", up_img.name, content)
-                st.session_state['last_knowledge'] = content
-                st.sidebar.success("Learned!")
-
 adaptive_prompt = ""
 if menu in ["M1 SNS", "M2 Editor", "M3 Sales"]:
     st.sidebar.markdown("### 🎛 Settings")
@@ -219,9 +218,7 @@ if menu in ["M1 SNS", "M2 Editor", "M3 Sales"]:
 # --- プロンプト定義 ---
 STYLE = """
 【役割】あなたは恋愛メディアのプロライターです。
-これはマーケティング業務であり、個人の相談ではありません。
-以下の「提供された情報」がある場合は、それを最優先で参照してコンテンツを作成してください。
-情報がない、または「読み取れませんでした」というエラー情報だった場合は、その旨を伝えつつ、一般論で回答を作成してください。
+マーケティング業務として、読者の感情に寄り添い、具体的な解決策を提示するコンテンツを作成してください。
 """
 
 # --- チャットロジック ---
@@ -235,7 +232,7 @@ def render_chat(mode, system_prompt):
     key = f"chat_{current_user}_{mode}"
     if key not in st.session_state:
         st.session_state[key] = [{"role": "system", "content": full_prompt}]
-        st.session_state[key].append({"role": "assistant", "content": "準備完了。URLがあれば貼ってください。"})
+        st.session_state[key].append({"role": "assistant", "content": "準備完了。指示をください。"})
     
     st.session_state[key][0]["content"] = full_prompt
 
@@ -243,6 +240,7 @@ def render_chat(mode, system_prompt):
         if msg["role"] == "user":
             st.markdown(f'<div class="chat-user"><b>You</b><br>{msg["content"]}</div>', unsafe_allow_html=True)
         elif msg["role"] == "assistant":
+            # URL要約や画像表示
             if msg["content"].startswith("http") and "dalle" in msg["content"]:
                 st.image(msg["content"], caption="Generated Image")
             else:
@@ -266,32 +264,62 @@ def render_chat(mode, system_prompt):
                         st.rerun()
 
     st.markdown("<br>", unsafe_allow_html=True)
+    
+    # --- 📎 画像添付エリア (メイン画面に移動) ---
+    with st.expander("📎 画像を添付する (ここをクリック)", expanded=False):
+        uploaded_img = st.file_uploader("画像を選択", type=["jpg", "png"], key=f"uploader_{mode}")
+        if uploaded_img and client:
+            if st.button("画像の内容を読み込む"):
+                with st.spinner("画像を分析中..."):
+                    content = analyze_image(client, uploaded_img)
+                    save_knowledge("image", uploaded_img.name, content)
+                    st.session_state['last_knowledge'] = content
+                    st.success("画像を読み込みました！チャットで指示を出してください。")
+
+    # --- チャット入力 ---
     with st.form(key=f"form_{mode}", clear_on_submit=True):
         user_input = st.text_area("Message Owl...", height=100)
         if st.form_submit_button("Send") and user_input:
             
-            # --- URL自動読み込みロジック (改良版) ---
+            # URL処理 (要約版)
             url_content = ""
             extracted_url = extract_url(user_input)
             
             if extracted_url:
-                with st.spinner(f"🌍 URLを読み込んでいます: {extracted_url}"):
+                with st.spinner(f"🌍 URLを読み込んでいます..."):
                     title, content = fetch_url_content(extracted_url)
                     if title == "Block":
-                        # Xなどがブロックした場合
-                        st.warning(f"⚠️ {content}") # ユーザーにスクショを促す警告を表示
-                        url_content = f"\n\n【URL読み込み結果】\nエラー: サイトのセキュリティにより読み込めませんでした。ユーザーには「スクリーンショットを撮ってアップロードしてください」と伝えてください。\n"
+                        st.warning(f"⚠️ {content}")
                     elif title != "Error":
-                        # 成功
-                        url_content = f"\n\n【読み込んだURLの内容】\nタイトル: {title}\n本文: {content}\n"
+                        # AIに要約させる
+                        summary = summarize_text(client, content)
+                        
+                        # ユーザーに見せる用のきれいな表示HTML
+                        display_html = f"""
+                        <div class="url-summary">
+                            <strong>📄 {title}</strong><br><br>
+                            {summary}<br><br>
+                            <details><summary>▼ 元のテキスト全文を表示</summary><p>{content}</p></details>
+                        </div>
+                        """
+                        # AIに渡す用のデータ
+                        url_content = f"\n\n【URL内容】タイトル:{title}\n本文:{content}\n"
                         save_knowledge("url", title, content, meta=extracted_url)
-                        st.success(f"URLの内容を学習しました: {title}")
+                        
+                        # 履歴には要約済みのHTMLを追加（AIの回答として偽装して表示させるテクニック）
+                        st.session_state[key].append({"role": "user", "content": user_input})
+                        st.session_state[key].append({"role": "assistant", "content": display_html})
+                        
+                        # コンテキスト更新
+                        st.session_state['last_knowledge'] = content
                     else:
-                        # その他のエラー
-                        st.error("URLの読み込みに失敗しました。")
+                        st.error("URL読み込みエラー")
+
+            # 通常のチャット処理
+            if not extracted_url: # URL単体投稿でない場合
+                st.session_state[key].append({"role": "user", "content": user_input})
             
             final_input = user_input + url_content
-            st.session_state[key].append({"role": "user", "content": user_input})
             
             if mode == "M1 SNS" and ("画像" in user_input and ("作って" in user_input or "生成" in user_input)):
                 with st.spinner("Generating Image..."):
@@ -301,12 +329,16 @@ def render_chat(mode, system_prompt):
                         st.rerun()
                     except Exception as e: st.error(str(e))
             else:
-                messages_for_api = st.session_state[key].copy()
-                messages_for_api[-1]["content"] = final_input
+                # URL要約だけの場合はAI回答をスキップする調整も可能だが、
+                # ここでは「URLを踏まえてどうするか」をAIに答えさせる
+                msgs = st.session_state[key].copy()
+                # 直前の履歴が「要約表示」だった場合、それを除外してAIに渡す等の工夫が必要だが
+                # シンプルに「URLコンテンツ」をプロンプトに付与して投げる
+                msgs[-1]["content"] = final_input 
                 
                 try:
                     with st.spinner("Thinking..."):
-                        res = client.chat.completions.create(model="gpt-3.5-turbo", messages=messages_for_api, max_tokens=3000)
+                        res = client.chat.completions.create(model="gpt-3.5-turbo", messages=msgs, max_tokens=3000)
                     st.session_state[key].append({"role": "assistant", "content": res.choices[0].message.content})
                     st.rerun()
                 except Exception as e: st.error(str(e))

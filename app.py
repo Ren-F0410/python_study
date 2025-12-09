@@ -7,7 +7,7 @@ import base64
 import io
 
 # --- 1. 設定 & デザイン ---
-st.set_page_config(page_title="Owl v3.0.2", page_icon="🦉", layout="wide")
+st.set_page_config(page_title="Owl v3.1", page_icon="🦉", layout="wide")
 
 st.markdown("""
 <style>
@@ -91,16 +91,17 @@ def save_feedback(pid, module, content, rating):
     st.toast(f"フィードバック送信: {rating}")
 
 def analyze_image(client, image_file):
-    # 安全のためファイルポインタをリセット
+    # ファイル読み込み位置をリセット（重要）
     image_file.seek(0)
     base64_image = base64.b64encode(image_file.read()).decode('utf-8')
-    # gpt-4o-miniに変更（安価・高速・利用制限が緩い）
+    
+    # 軽いモデル(gpt-4o-mini)を使用
     response = client.chat.completions.create(
         model="gpt-4o-mini",
         messages=[
-            {"role": "system", "content": "画像の内容を詳細に分析し、テキストで説明してください。"},
+            {"role": "system", "content": "画像の内容を詳細に分析し、何が写っているかテキストで説明してください。"},
             {"role": "user", "content": [
-                {"type": "text", "text": "分析してください。"},
+                {"type": "text", "text": "この画像を分析してください。"},
                 {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}}
             ]}
         ],
@@ -163,20 +164,21 @@ if menu in ["📱 M1 SNS", "📝 M2 記事", "💰 M3 販売"]:
     uploaded_file = st.sidebar.file_uploader("参考画像をアップロード", type=["jpg", "png", "jpeg"])
     
     if uploaded_file and client:
+        # ボタンを押したら処理開始
         if st.sidebar.button("画像を分析する"):
-            with st.sidebar.spinner("Analyzing..."):
-                # ここに安全装置（try-except）を追加
+            # 安全のため、サイドバーではなくメイン画面でスピナーを回す
+            with st.spinner("画像を分析しています... (gpt-4o-mini)"):
                 try:
                     analysis = analyze_image(client, uploaded_file)
                     st.session_state['image_analysis'] = analysis
                     st.sidebar.success("分析完了！")
                 except Exception as e:
-                    st.sidebar.error(f"分析エラー: {e}")
-                    st.sidebar.caption("※ APIキーの権限不足や、画像サイズの問題の可能性があります。")
+                    st.error(f"画像分析エラー: {e}")
+                    st.sidebar.error("分析に失敗しました")
 
 if 'image_analysis' in st.session_state:
     image_analysis_result = f"\n【画像分析データ】\n{st.session_state['image_analysis']}\n※このデータを踏まえて回答せよ。"
-    st.sidebar.info("画像データ保持中")
+    st.sidebar.success("✅ 画像データを保持中")
     if st.sidebar.button("クリア"):
         del st.session_state['image_analysis']
         st.rerun()
@@ -188,7 +190,7 @@ if not current_project_id:
 conn = sqlite3.connect(DB_PATH)
 p_data = pd.read_sql("SELECT * FROM projects WHERE project_id = ?", conn, params=(current_project_id,)).iloc[0]
 conn.close()
-st.markdown(f"""<div class="main-header"><h1>🦉 Athenalink OS v3.0.2</h1><p>Project: <b>{p_data['name']}</b> | Goal: {p_data['goal']}</p></div>""", unsafe_allow_html=True)
+st.markdown(f"""<div class="main-header"><h1>🦉 Athenalink OS v3.1</h1><p>Project: <b>{p_data['name']}</b> | Goal: {p_data['goal']}</p></div>""", unsafe_allow_html=True)
 
 STYLE = "【スタイル】\n1.言語:日本語\n2.禁止:自分語り/ポエム/説教\n3.構成:受容→分析→処方\n4.態度:プロのカウンセラー"
 prompts = {

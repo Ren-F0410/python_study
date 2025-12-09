@@ -91,17 +91,17 @@ def save_feedback(pid, module, content, rating):
     st.toast(f"フィードバック送信: {rating}")
 
 def analyze_image(client, image_file):
-    # ファイル読み込み位置をリセット（重要）
+    # ファイルポインタのリセット（重要）
     image_file.seek(0)
     base64_image = base64.b64encode(image_file.read()).decode('utf-8')
     
-    # 軽いモデル(gpt-4o-mini)を使用
+    # gpt-4o-miniで高速・安全に
     response = client.chat.completions.create(
         model="gpt-4o-mini",
         messages=[
-            {"role": "system", "content": "画像の内容を詳細に分析し、何が写っているかテキストで説明してください。"},
+            {"role": "system", "content": "画像の内容を詳細に分析し、テキストで説明してください。"},
             {"role": "user", "content": [
-                {"type": "text", "text": "この画像を分析してください。"},
+                {"type": "text", "text": "分析してください。"},
                 {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}}
             ]}
         ],
@@ -164,17 +164,15 @@ if menu in ["📱 M1 SNS", "📝 M2 記事", "💰 M3 販売"]:
     uploaded_file = st.sidebar.file_uploader("参考画像をアップロード", type=["jpg", "png", "jpeg"])
     
     if uploaded_file and client:
-        # ボタンを押したら処理開始
+        # ここが修正ポイント！サイドバーではなくメイン画面で処理します
         if st.sidebar.button("画像を分析する"):
-            # 安全のため、サイドバーではなくメイン画面でスピナーを回す
-            with st.spinner("画像を分析しています... (gpt-4o-mini)"):
+            with st.spinner("画像を分析しています..."):
                 try:
                     analysis = analyze_image(client, uploaded_file)
                     st.session_state['image_analysis'] = analysis
                     st.sidebar.success("分析完了！")
                 except Exception as e:
-                    st.error(f"画像分析エラー: {e}")
-                    st.sidebar.error("分析に失敗しました")
+                    st.error(f"分析エラー: {e}")
 
 if 'image_analysis' in st.session_state:
     image_analysis_result = f"\n【画像分析データ】\n{st.session_state['image_analysis']}\n※このデータを踏まえて回答せよ。"

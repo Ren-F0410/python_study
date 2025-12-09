@@ -4,144 +4,126 @@ import pandas as pd
 from datetime import datetime
 from openai import OpenAI
 import base64
-import time
 
-# --- 1. アプリ設定 & Gemini風デザイン ---
-st.set_page_config(page_title="Owl v3.1", page_icon="🦉", layout="wide")
+# --- 1. アプリ設定 & ミニマルデザイン定義 ---
+st.set_page_config(page_title="Owl v3.2", page_icon="🦉", layout="wide")
 
-# カスタムCSS (Gemini Style)
-st.markdown("""
+# カラー定義
+COLOR_BG = "#FFFFFF"
+COLOR_ACCENT = "#F7D9E3"
+COLOR_TEXT = "#222222"
+COLOR_BORDER = "rgba(0,0,0,0.06)"
+
+st.markdown(f"""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap');
     
-    :root {
-        --bg-color: #ffffff; /* 背景：白 */
-        --sidebar-bg: #f0f4f9; /* サイドバー：薄いグレー（Gemini風） */
-        --input-bg: #f0f4f9; /* 入力欄背景：薄いグレー */
-        --text-color: #1f1f1f; /* 文字色：ほぼ黒 */
-        --primary-accent: #0056d2; /* アクセント：Geminiブルー */
-        --border-radius: 24px; /* 丸み */
-    }
-
-    html, body, [class*="css"] {
+    html, body, [class*="css"] {{
         font-family: 'Noto Sans JP', sans-serif;
-        color: var(--text-color);
-        background-color: var(--bg-color);
-    }
+        color: {COLOR_TEXT};
+        background-color: {COLOR_BG};
+    }}
 
-    /* 全体の背景 */
-    .stApp {
-        background-color: var(--bg-color);
-        background-image: none; /* 画像なし、シンプルに */
-    }
-
-    /* --- サイドバー --- */
-    [data-testid="stSidebar"] {
-        background-color: var(--sidebar-bg);
-        border-right: none;
-    }
-    [data-testid="stSidebar"] * {
-        color: var(--text-color) !important;
-    }
-    
-    /* --- 入力欄 (Gemini風) --- */
-    /* テキスト入力、エリア、セレクトボックス */
-    .stTextInput input, .stTextArea textarea, .stSelectbox div[data-baseweb="select"] {
-        background-color: var(--input-bg) !important;
-        color: var(--text-color) !important;
-        -webkit-text-fill-color: var(--text-color) !important;
-        caret-color: var(--text-color) !important;
-        border: 1px solid transparent !important; /* 枠線なし */
-        border-radius: 20px !important; /* Geminiのような丸み */
-        padding: 15px 20px !important;
-        font-size: 16px !important;
-    }
-    
-    /* 入力時のフォーカス（青い枠ではなく、背景を少し濃くする感じor枠線を出す） */
-    .stTextInput input:focus, .stTextArea textarea:focus {
-        background-color: #e8ecf2 !important; /* フォーカス時に少し濃く */
-        border: 1px solid #d0d7de !important;
-        box-shadow: none !important;
-    }
+    /* 全体の背景リセット */
+    .stApp {{
+        background-color: {COLOR_BG};
+        background-image: none;
+    }}
 
     /* --- ヘッダー --- */
-    .main-header {
-        background: transparent;
-        padding: 1rem 0;
+    .header-container {{
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding-bottom: 1rem;
         margin-bottom: 2rem;
-        border-bottom: 1px solid #eee;
-    }
-    .main-header h1 {
-        color: var(--text-color) !important;
-        font-size: 2.2rem;
-        font-weight: 500;
-        letter-spacing: -0.05rem;
-    }
-    .main-header p {
-        color: #555555 !important;
-        font-size: 1rem;
-    }
+        border-bottom: 1px solid {COLOR_BORDER};
+    }}
+    .app-title {{
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: {COLOR_TEXT};
+        letter-spacing: 0.05em;
+    }}
+    .user-info {{
+        font-size: 0.9rem;
+        color: #666;
+    }}
 
-    /* --- ボタン --- */
-    div.stButton > button {
-        background-color: var(--input-bg);
-        color: var(--text-color);
-        border: none;
-        border-radius: 24px;
-        padding: 0.5rem 1.5rem;
-        font-weight: 500;
-        transition: all 0.2s;
-    }
-    div.stButton > button:hover {
-        background-color: #dbe0e8; /* ホバー時のグレー */
-        color: #000;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    }
-    
-    /* 送信ボタンの特別色（もし必要なら） */
-    /* div.stButton > button:active {
-        background-color: #0056d2;
-        color: white;
-    }
-    */
+    /* --- サイドバー（ナビゲーション） --- */
+    [data-testid="stSidebar"] {{
+        background-color: #FAFAFA; /* ほんの少しだけグレーにして区別 */
+        border-right: 1px solid {COLOR_BORDER};
+    }}
+    [data-testid="stSidebar"] * {{
+        color: {COLOR_TEXT} !important;
+    }}
 
-    /* --- カードデザイン --- */
-    .card {
-        background-color: #ffffff;
-        padding: 1.5rem;
-        border-radius: 16px;
+    /* --- 入力欄 (ミニマル統一) --- */
+    .stTextInput input, .stTextArea textarea, .stSelectbox div[data-baseweb="select"] {{
+        background-color: {COLOR_BG} !important;
+        color: {COLOR_TEXT} !important;
+        border: 1px solid {COLOR_BORDER} !important;
+        border-radius: 8px !important; /* 少し丸める程度 */
+        padding: 12px !important;
+        box-shadow: none !important;
+    }}
+    .stTextInput input:focus, .stTextArea textarea:focus {{
+        border-color: {COLOR_ACCENT} !important;
+    }}
+
+    /* --- ボタン (ACCENTカラー) --- */
+    div.stButton > button {{
+        background-color: {COLOR_ACCENT} !important;
+        color: {COLOR_TEXT} !important;
+        border: none !important;
+        border-radius: 8px !important;
+        font-weight: 500 !important;
+        padding: 0.5rem 1.2rem !important;
+        box-shadow: none !important;
+    }}
+    div.stButton > button:hover {{
+        opacity: 0.8;
+    }}
+
+    /* --- カード (枠線のみ) --- */
+    .minimal-card {{
+        background-color: {COLOR_BG};
+        border: 1px solid {COLOR_BORDER};
+        border-radius: 8px;
+        padding: 1.2rem;
         margin-bottom: 1rem;
-        border: 1px solid #e0e0e0;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.02);
-    }
+    }}
+    .card-title {{
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+        font-size: 1rem;
+        border-left: 4px solid {COLOR_ACCENT};
+        padding-left: 10px;
+    }}
+
+    /* --- チャットバブルのカスタマイズ --- */
+    /* ユーザーのメッセージ */
+    [data-testid="stChatMessage"][data-testid="user"] {{
+        background-color: {COLOR_ACCENT};
+        border-radius: 12px;
+        padding: 1rem;
+        margin-bottom: 0.5rem;
+        border: none;
+    }}
+    /* アシスタントのメッセージ */
+    [data-testid="stChatMessage"][data-testid="assistant"] {{
+        background-color: {COLOR_BG};
+        border: 1px solid {COLOR_BORDER};
+        border-radius: 12px;
+        padding: 1rem;
+        margin-bottom: 0.5rem;
+    }}
     
-    /* ログインボックス */
-    .login-box {
-        background-color: #ffffff;
-        padding: 40px;
-        border-radius: 24px;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.05);
-        text-align: center;
-        border: 1px solid #f0f0f0;
-    }
-    
-    /* チャットメッセージのスタイル */
-    /* ユーザー（右） */
-    [data-testid="stChatMessage"]:nth-child(odd) {
-        background-color: transparent; 
-    }
-    /* アシスタント（左） */
-    [data-testid="stChatMessage"]:nth-child(even) {
-        background-color: transparent;
-    }
-    
-    /* タグ */
-    span[data-baseweb="tag"] {
-        background-color: #e0e4e9 !important;
-    }
-    span[data-baseweb="tag"] span {
-        color: #1f1f1f !important;
-    }
+    /* アバターアイコンを消す（あるいは小さくする） */
+    [data-testid="stChatMessageAvatarBackground"] {{
+        display: none;
+    }}
 </style>
 """, unsafe_allow_html=True)
 
@@ -162,7 +144,7 @@ def init_db():
 
 init_db()
 
-# --- 2. データ関数 ---
+# --- データ関数 ---
 def get_user_name(uid):
     conn = sqlite3.connect(DB_PATH)
     res = conn.execute("SELECT name FROM users WHERE user_id=?", (uid,)).fetchone()
@@ -172,12 +154,9 @@ def get_user_name(uid):
 def get_tasks(uid=None):
     conn = sqlite3.connect(DB_PATH)
     query = "SELECT * FROM tasks WHERE status != 'DONE' "
-    params = []
-    if uid:
-        query += "AND assignee = ? "
-        params.append(uid)
+    if uid: query += f"AND assignee = '{uid}' "
     query += "ORDER BY priority DESC, created_at DESC"
-    df = pd.read_sql(query, conn, params=params)
+    df = pd.read_sql(query, conn)
     conn.close()
     return df
 
@@ -205,32 +184,31 @@ def get_team_chat():
     conn.close()
     return df
 
+def analyze_image(client, image_file):
+    image_file.seek(0)
+    b64 = base64.b64encode(image_file.read()).decode('utf-8')
+    res = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[{"role": "user", "content": [{"type": "text", "text": "画像分析をお願いします。"}, {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{b64}"}}]}]
+    )
+    return res.choices[0].message.content
+
 def save_feedback(pid, module, content, rating):
     conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    c.execute("INSERT INTO feedback (project_id, module, content, rating, created_at) VALUES (?, ?, ?, ?, ?)", (pid, module, content, rating, datetime.now()))
+    conn.execute("INSERT INTO feedback (project_id, module, content, rating, created_at) VALUES (?, ?, ?, ?, ?)", (pid, module, content, rating, datetime.now()))
     conn.commit()
     conn.close()
-    st.toast(f"Feedback saved: {rating}")
+    st.toast("Thank you!")
 
-# --- 3. ログイン処理 ---
-if 'user' not in st.session_state:
-    st.session_state['user'] = None
-
+# --- ログイン ---
+if 'user' not in st.session_state: st.session_state['user'] = None
 if not st.session_state['user']:
-    c1, c2, c3 = st.columns([1, 2, 1])
+    c1, c2, c3 = st.columns([1,1,1])
     with c2:
-        st.markdown("""
-        <div class="login-box">
-            <h1>🦉 Owl v3.1</h1>
-            <p>Athenalink Director AI</p>
-        </div>
-        <br>
-        """, unsafe_allow_html=True)
-        
-        with st.form("login_form"):
-            uid = st.selectbox("ユーザーを選択", ["ren", "shu"])
-            if st.form_submit_button("ログイン"):
+        st.markdown(f"<h1 style='text-align:center; color:{COLOR_TEXT};'>Owl v3.2</h1>", unsafe_allow_html=True)
+        with st.form("login"):
+            uid = st.selectbox("USER", ["ren", "shu"])
+            if st.form_submit_button("LOGIN"):
                 st.session_state['user'] = uid
                 st.rerun()
     st.stop()
@@ -238,148 +216,180 @@ if not st.session_state['user']:
 current_user = st.session_state['user']
 user_name = get_user_name(current_user)
 
-# --- 4. メインUI ---
+# --- レイアウト構築 ---
 
-# サイドバー
-st.sidebar.markdown(f"## 👤 {user_name}")
-if st.sidebar.button("ログアウト"):
-    st.session_state['user'] = None
-    st.rerun()
+# ヘッダー (全ページ共通)
+st.markdown(f"""
+<div class="header-container">
+    <div class="app-title">🦉 Owl v3.2</div>
+    <div class="user-info">User: <b>{user_name}</b> | <a href="#" onclick="window.location.reload();">Logout</a></div>
+</div>
+""", unsafe_allow_html=True)
 
+# サイドバー (ナビゲーションのみ)
+st.sidebar.markdown("### MENU")
+menu = st.sidebar.radio("", ["ダッシュボード", "チームチャット", "M4 戦略", "M1 SNS", "M2 記事", "M3 セールス"])
 st.sidebar.markdown("---")
 if "OPENAI_API_KEY" in st.secrets:
     api_key = st.secrets["OPENAI_API_KEY"]
 else:
-    api_key = st.sidebar.text_input("OpenAI API Key", type="password")
-
-# メニュー名もシンプルに
-menu = st.sidebar.radio("MENU", ["ダッシュボード", "チームチャット", "キャンペーン設計", "戦略 (Owl)", "SNS運用", "セールス"])
-
+    api_key = st.sidebar.text_input("API Key", type="password")
 client = OpenAI(api_key=api_key) if api_key else None
 
-# OwlチャットUI
-def render_owl_chat(mode, system_prompt):
+if st.sidebar.button("ログアウト"):
+    st.session_state['user'] = None
+    st.rerun()
+
+# --- 共通チャットコンポーネント ---
+def render_chat_interface(mode, system_prompt, right_column_content=None):
     if not client: st.warning("API Key Required"); return
     
-    st.markdown(f"### {mode}")
+    # 2カラムレイアウト (左:チャット / 右:サイドパネル)
+    col_chat, col_side = st.columns([1.8, 1])
+    
     key = f"chat_{current_user}_{mode}"
     if key not in st.session_state:
         st.session_state[key] = [{"role": "system", "content": system_prompt}]
         st.session_state[key].append({"role": "assistant", "content": "準備完了。指示をください。"})
-    
-    for i, msg in enumerate(st.session_state[key]):
-        if msg["role"] != "system":
-            # シンプルなアイコン表示
-            avatar = "🦉" if msg["role"] == "assistant" else "👤"
-            with st.chat_message(msg["role"], avatar=avatar):
-                st.write(msg["content"])
-                if msg["role"] == "assistant" and i > 0:
-                    c1, c2 = st.columns([1, 10])
-                    with c1:
-                        if st.button("👍", key=f"up_{key}_{i}"): save_feedback("GEN", mode, msg["content"], "good")
-                    with c2:
-                        if st.button("👎", key=f"down_{key}_{i}"): save_feedback("GEN", mode, msg["content"], "bad")
-    
-    st.markdown("---")
-    # Gemini風の入力フォーム
-    with st.form(key=f"form_{mode}", clear_on_submit=True):
-        # テキストエリアの高さを少し抑え、丸みのあるCSSを適用済み
-        prompt = st.text_area("Owlにメッセージを送信 (Enterで改行)", height=80, label_visibility="collapsed")
-        c1, c2 = st.columns([6, 1])
-        with c2:
-            st.write("") # スペース調整
-            submit = st.form_submit_button("送信")
-    
-    if submit and prompt:
-        st.session_state[key].append({"role": "user", "content": prompt})
-        
-        try:
-            with st.spinner("Generating..."):
-                stream = client.chat.completions.create(model="gpt-3.5-turbo", messages=st.session_state[key], stream=True)
-                response_text = ""
-                for chunk in stream:
-                    if chunk.choices[0].delta.content:
-                        response_text += chunk.choices[0].delta.content
-                
-                st.session_state[key].append({"role": "assistant", "content": response_text})
-                st.rerun()
-        except Exception as e: st.error(str(e))
 
-# コンテンツ
+    with col_chat:
+        st.markdown(f"#### {mode}")
+        # チャット履歴表示
+        for i, msg in enumerate(st.session_state[key]):
+            if msg["role"] != "system":
+                # カスタムCSSでバブル化
+                with st.chat_message(msg["role"]):
+                    st.write(msg["content"])
+                    if msg["role"] == "assistant" and i > 0:
+                        c1, c2, c3 = st.columns([1,1,8])
+                        with c1: 
+                            if st.button("👍", key=f"up_{key}_{i}"): save_feedback("GEN", mode, msg["content"], "good")
+                        with c2: 
+                            if st.button("👎", key=f"down_{key}_{i}"): save_feedback("GEN", mode, msg["content"], "bad")
+
+        st.markdown("---")
+        # 入力フォーム (下部)
+        with st.form(key=f"form_{mode}", clear_on_submit=True):
+            user_input = st.text_area("指示を入力...", height=100)
+            c1, c2 = st.columns([4, 1])
+            with c2:
+                send = st.form_submit_button("送信")
+        
+        if send and user_input:
+            st.session_state[key].append({"role": "user", "content": user_input})
+            try:
+                with st.spinner("Writing..."):
+                    res = client.chat.completions.create(model="gpt-3.5-turbo", messages=st.session_state[key], max_tokens=2000)
+                st.session_state[key].append({"role": "assistant", "content": res.choices[0].message.content})
+                st.rerun()
+            except Exception as e: st.error(str(e))
+
+    with col_side:
+        # 右サイドパネル（タスクや設定など）
+        st.markdown('<div class="card-title">Information</div>', unsafe_allow_html=True)
+        if right_column_content:
+            right_column_content()
+        
+        # 共通のタスク表示
+        st.markdown('<div class="card-title" style="margin-top:20px;">My Tasks</div>', unsafe_allow_html=True)
+        tasks = get_tasks(current_user).head(5)
+        if not tasks.empty:
+            for i, t in tasks.iterrows():
+                st.markdown(f"""
+                <div class="minimal-card" style="padding:0.8rem;">
+                    <small style="color:#888;">{t['priority']}</small><br>
+                    <b>{t['title']}</b>
+                </div>
+                """, unsafe_allow_html=True)
+                if st.button("完了", key=f"done_side_{t['task_id']}"): complete_task(t['task_id']); st.rerun()
+        else:
+            st.info("No tasks.")
+
+# --- 各ページの内容 ---
+
 if menu == "ダッシュボード":
-    st.markdown(f"""
-    <div class="main-header">
-        <h1>Hello, {user_name}</h1>
-        <p>Athenalink Operation System</p>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    c1, c2 = st.columns(2)
+    c1, c2 = st.columns([2, 1])
     with c1:
-        st.markdown("#### 今日のタスク")
-        my_tasks = get_tasks(current_user).head(3)
-        if not my_tasks.empty:
-            for i, task in my_tasks.iterrows():
-                st.markdown(f'<div class="card"><b>{task["title"]}</b> <span style="float:right; color:#d9534f;">{task["priority"]}</span></div>', unsafe_allow_html=True)
-                if st.button("完了", key=f"d_{task['task_id']}"): complete_task(task['task_id']); st.rerun()
-        else: st.info("タスクはありません")
-            
-    with c2:
-        st.markdown("#### チームチャット")
+        st.markdown("### Dashboard")
+        st.info("左のメニューからモードを選択してください。")
+        
+        # チームチャットプレビュー
+        st.markdown('<div class="card-title">Team Chat (Latest)</div>', unsafe_allow_html=True)
         chats = get_team_chat().head(3)
-        for i, chat in chats.iterrows():
-            st.caption(f"{chat['user_id']} • {chat['created_at']}")
-            st.markdown(f'<div class="card" style="padding:10px; background-color:#f9f9f9; border:none;">{chat["message"]}</div>', unsafe_allow_html=True)
+        for i, c in chats.iterrows():
+            st.markdown(f"""
+            <div class="minimal-card">
+                <small>{c['user_id']} • {c['created_at']}</small><br>
+                {c['message']}
+            </div>
+            """, unsafe_allow_html=True)
+
+    with c2:
+        st.markdown('<div class="card-title">Quick Add Task</div>', unsafe_allow_html=True)
+        with st.form("quick_task"):
+            t = st.text_input("タスク名")
+            p = st.selectbox("優先度", ["High", "Middle"])
+            if st.form_submit_button("追加"):
+                add_task("general", t, current_user, p)
+                st.rerun()
+        
+        st.markdown('<div class="card-title" style="margin-top:20px;">My Tasks</div>', unsafe_allow_html=True)
+        tasks = get_tasks(current_user)
+        for i, t in tasks.iterrows():
+            st.markdown(f'<div class="minimal-card">{t["title"]}</div>', unsafe_allow_html=True)
 
 elif menu == "チームチャット":
-    st.markdown("### Team Chat")
-    
-    with st.form("chat_form", clear_on_submit=True):
-        c1, c2 = st.columns([5, 1])
-        # Gemini風入力
-        msg = c1.text_area("メッセージを入力...", height=60, label_visibility="collapsed")
-        with c2:
-            st.write("")
-            submit = st.form_submit_button("送信")
+    c1, c2 = st.columns([2, 1])
+    with c1:
+        st.markdown("### Team Chat")
+        with st.form("team_chat_form", clear_on_submit=True):
+            msg = st.text_area("メッセージ", height=80)
+            if st.form_submit_button("送信"):
+                send_team_chat(current_user, msg)
+                st.rerun()
         
-        if submit and msg:
-            send_team_chat(current_user, msg)
-            st.rerun()
-    
-    chats = get_team_chat()
-    for i, chat in chats.iterrows():
-        is_me = chat['user_id'] == current_user
-        align = "text-align: right;" if is_me else ""
-        # 自分のメッセージは薄い青（Gemini風）、相手はグレー
-        bg = "#e8f0fe" if is_me else "#f1f3f4"
-        
-        st.markdown(f"""
-        <div style="{align} margin-bottom: 10px;">
-            <small style="color:#666;">{chat['user_id']}</small><br>
-            <span style="background-color: {bg}; color: #1f1f1f; padding: 10px 16px; border-radius: 18px; display: inline-block;">
-                {chat['message']}
-            </span>
-        </div>
-        """, unsafe_allow_html=True)
+        chats = get_team_chat()
+        for i, c in chats.iterrows():
+            is_me = c['user_id'] == current_user
+            # チャットバブル風表示（HTML）
+            bg = "#F7D9E3" if is_me else "#FFFFFF"
+            border = "none" if is_me else "1px solid rgba(0,0,0,0.06)"
+            align = "right" if is_me else "left"
+            st.markdown(f"""
+            <div style="text-align:{align}; margin-bottom:10px;">
+                <div style="display:inline-block; background:{bg}; border:{border}; padding:10px 15px; border-radius:12px; text-align:left; max-width:80%;">
+                    <div style="font-size:0.75rem; color:#666; margin-bottom:4px;">{c['user_id']}</div>
+                    {c['message']}
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+            
+    with c2:
+        st.markdown('<div class="card-title">Members</div>', unsafe_allow_html=True)
+        st.write("• Ren (Owner)")
+        st.write("• Shu (Member)")
 
+elif menu == "M1 SNS":
+    def m1_sidebar():
+        st.write("SNS用の画像分析")
+        up = st.file_uploader("画像アップロード", type=["jpg","png"])
+        if up and client:
+            if st.button("分析実行"):
+                res = analyze_image(client, up)
+                st.session_state['img_context'] = res
+                st.success("完了")
+    
+    prompt = "SNS担当です。読者の心を代弁するポストを作成してください。"
+    if 'img_context' in st.session_state: prompt += f"\n[画像分析]: {st.session_state['img_context']}"
+    render_chat_interface("M1 SNS", prompt, m1_sidebar)
+
+elif menu == "M4 戦略": render_chat_interface("M4 Strategy", "戦略参謀です。")
+elif menu == "M2 記事": render_chat_interface("M2 Editor", "編集者です。")
+elif menu == "M3 セールス": render_chat_interface("M3 Sales", "セールスライターです。")
 elif menu == "キャンペーン設計":
     st.markdown("### Campaign Planner")
-    
-    with st.form("campaign_form"):
-        c1, c2 = st.columns(2)
-        goal = c1.text_input("目的", "例：note販売")
-        period = c2.selectbox("期間", ["7日間", "14日間"])
-        media = st.multiselect("媒体", ["X", "note", "LINE"], default=["X"])
-        
-        st.write("")
-        submitted = st.form_submit_button("計画を生成")
-        
-    if submitted:
-        prompt = f"目的：{goal}、期間：{period}、媒体：{media} の計画を作成せよ。"
-        render_owl_chat("Planner", prompt)
-    else:
-        render_owl_chat("Planner", "マーケティングプランナーです。")
-
-elif menu == "戦略 (Owl)": render_owl_chat("M4 Strategy", "戦略参謀です。")
-elif menu == "SNS運用": render_owl_chat("M1 SNS", "SNS担当です。")
-elif menu == "セールス": render_owl_chat("M3 Sales", "セールスライターです。")
+    with st.form("camp"):
+        target = st.text_input("目的")
+        span = st.selectbox("期間", ["7days", "14days"])
+        if st.form_submit_button("作成"):
+            render_chat_interface("Planner", f"目的:{target}, 期間:{span} の計画を立てて。")

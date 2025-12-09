@@ -7,9 +7,10 @@ import base64
 import requests
 from bs4 import BeautifulSoup
 import io
+import re
 
 # --- 1. アプリ設定 & デザイン ---
-st.set_page_config(page_title="Owl v3.6.3", page_icon="🦉", layout="wide")
+st.set_page_config(page_title="Owl v3.6.4", page_icon="🦉", layout="wide")
 
 # カラーパレット
 COLOR_BG_MAIN = "#0B1020"
@@ -110,26 +111,34 @@ def get_knowledge_summary():
     conn.close()
     return df
 
-# URL解析 (強化版: User-Agent追加)
+# URL抽出
+def extract_url(text):
+    urls = re.findall(r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+', text)
+    return urls[0] if urls else None
+
+# URL解析 (強化版)
 def fetch_url_content(url):
     headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'}
     try:
         response = requests.get(url, headers=headers, timeout=10)
-        response.encoding = response.apparent_encoding # 文字化け防止
+        response.encoding = response.apparent_encoding
         soup = BeautifulSoup(response.text, 'html.parser')
-        title = soup.title.string if soup.title else url
         
-        # 不要なタグ削除
+        # 判定: XやGoogleなどのブロッカー
+        page_text = soup.get_text()
+        if "JavaScript" in page_text and "enable" in page_text:
+            return "Block", "このサイト（X/Twitter等）はプログラムからのアクセスをブロックしています。内容を読み取るには、スクリーンショットを撮って『画像分析』機能を使ってください。"
+            
+        title = soup.title.string if soup.title else url
         for script in soup(["script", "style"]):
             script.decompose()
-            
+        
         text = soup.get_text()
-        # 空行削除
         lines = (line.strip() for line in text.splitlines())
         chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
         text = '\n'.join(chunk for chunk in chunks if chunk)
         
-        return title, text[:10000] # 文字数制限
+        return title, text[:8000]
     except Exception as e:
         return "Error", f"取得失敗: {str(e)}"
 
@@ -149,7 +158,7 @@ def generate_image(client, prompt):
 # --- 3. ログイン ---
 if 'user' not in st.session_state: st.session_state['user'] = None
 if not st.session_state['user']:
-    st.markdown(f"<div class='login-box'><h1>🦉 Owl v3.6.3</h1><p>Athenalink Operation System</p></div>", unsafe_allow_html=True)
+    st.markdown(f"<div class='login-box'><h1>🦉 Owl v3.6.4</h1><p>Athenalink Operation System</p></div>", unsafe_allow_html=True)
     _, c2, _ = st.columns([1,1,1])
     with c2:
         with st.form("login"):
@@ -163,7 +172,7 @@ current_user = st.session_state['user']
 user_name = get_user_name(current_user)
 
 # --- 4. レイアウト & モジュール ---
-st.sidebar.markdown(f"### 🦉 Owl v3.6.3")
+st.sidebar.markdown(f"### 🦉 Owl v3.6.4")
 st.sidebar.markdown(f"<p style='color:#9CA3AF;'>User: {user_name}</p>", unsafe_allow_html=True)
 st.sidebar.markdown("---")
 menu = st.sidebar.radio("MENU", ["Dashboard", "Team Chat", "M4 Strategy", "M1 SNS", "M2 Editor", "M3 Sales"])
@@ -187,7 +196,7 @@ if st.sidebar.button("Logout"):
     st.session_state['user'] = None
     st.rerun()
 
-# --- インプット拡張 (画像のみサイドバーに残す) ---
+# --- インプット拡張 (画像) ---
 if menu != "Dashboard" and menu != "Team Chat":
     st.sidebar.markdown("### 👁️ Image Input")
     up_img = st.sidebar.file_uploader("Upload Image", type=["jpg", "png"])
@@ -209,12 +218,13 @@ if menu in ["M1 SNS", "M2 Editor", "M3 Sales"]:
 
 # --- プロンプト定義 ---
 STYLE = """
-【役割】あなたは恋愛メディアのプロライターです。ユーザーは編集長です。
-これはマーケティング業務であり、個人の相談ではありません。「相談に乗れない」等の拒否は禁止です。
-読者の感情に寄り添い、具体的な解決策を提示するコンテンツを作成してください。
+【役割】あなたは恋愛メディアのプロライターです。
+これはマーケティング業務であり、個人の相談ではありません。
+以下の「提供された情報」がある場合は、それを最優先で参照してコンテンツを作成してください。
+情報がない、または「読み取れませんでした」というエラー情報だった場合は、その旨を伝えつつ、一般論で回答を作成してください。
 """
 
-# --- チャットロジック (URL自動読み込み機能付き) ---
+# --- チャットロジック ---
 def render_chat(mode, system_prompt):
     if not client: st.warning("API Key Required"); return
     
@@ -225,7 +235,7 @@ def render_chat(mode, system_prompt):
     key = f"chat_{current_user}_{mode}"
     if key not in st.session_state:
         st.session_state[key] = [{"role": "system", "content": full_prompt}]
-        st.session_state[key].append({"role": "assistant", "content": "準備完了。URLがあれば貼ってください。自動で読み込みます。"})
+        st.session_state[key].append({"role": "assistant", "content": "準備完了。URLがあれば貼ってください。"})
     
     st.session_state[key][0]["content"] = full_prompt
 
@@ -238,10 +248,8 @@ def render_chat(mode, system_prompt):
             else:
                 st.markdown(f'<div class="chat-owl"><b>Owl</b><br>{msg["content"]}</div>', unsafe_allow_html=True)
             
-            # 評価ボタン
             voted_good = st.session_state.get(f"fb_good_{key}_{i}")
             voted_bad = st.session_state.get(f"fb_bad_{key}_{i}")
-            
             if voted_good: st.success("✅ Good")
             elif voted_bad: st.error("☑️ Bad")
             else:
@@ -262,23 +270,29 @@ def render_chat(mode, system_prompt):
         user_input = st.text_area("Message Owl...", height=100)
         if st.form_submit_button("Send") and user_input:
             
-            # --- URL自動読み込みロジック ---
+            # --- URL自動読み込みロジック (改良版) ---
             url_content = ""
-            if user_input.startswith("http"):
-                with st.spinner("🌍 URLの内容を読み込んでいます..."):
-                    title, content = fetch_url_content(user_input)
-                    if title != "Error":
+            extracted_url = extract_url(user_input)
+            
+            if extracted_url:
+                with st.spinner(f"🌍 URLを読み込んでいます: {extracted_url}"):
+                    title, content = fetch_url_content(extracted_url)
+                    if title == "Block":
+                        # Xなどがブロックした場合
+                        st.warning(f"⚠️ {content}") # ユーザーにスクショを促す警告を表示
+                        url_content = f"\n\n【URL読み込み結果】\nエラー: サイトのセキュリティにより読み込めませんでした。ユーザーには「スクリーンショットを撮ってアップロードしてください」と伝えてください。\n"
+                    elif title != "Error":
+                        # 成功
                         url_content = f"\n\n【読み込んだURLの内容】\nタイトル: {title}\n本文: {content}\n"
-                        save_knowledge("url", title, content, meta=user_input)
-                        st.success(f"URLを学習しました: {title}")
+                        save_knowledge("url", title, content, meta=extracted_url)
+                        st.success(f"URLの内容を学習しました: {title}")
                     else:
-                        st.error(f"URLの読み込みに失敗しました: {content}")
+                        # その他のエラー
+                        st.error("URLの読み込みに失敗しました。")
             
-            # メッセージ構築
             final_input = user_input + url_content
-            st.session_state[key].append({"role": "user", "content": user_input}) # 表示はURLのみ
+            st.session_state[key].append({"role": "user", "content": user_input})
             
-            # 画像生成 or テキスト生成
             if mode == "M1 SNS" and ("画像" in user_input and ("作って" in user_input or "生成" in user_input)):
                 with st.spinner("Generating Image..."):
                     try:
@@ -287,7 +301,6 @@ def render_chat(mode, system_prompt):
                         st.rerun()
                     except Exception as e: st.error(str(e))
             else:
-                # URL内容を含めてAIに渡す
                 messages_for_api = st.session_state[key].copy()
                 messages_for_api[-1]["content"] = final_input
                 

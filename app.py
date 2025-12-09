@@ -5,8 +5,8 @@ from datetime import datetime
 from openai import OpenAI
 import base64
 
-# --- 1. アプリ設定 & デザイン (v3.3 Minimalベース) ---
-st.set_page_config(page_title="Owl v3.4", page_icon="🦉", layout="wide")
+# --- 1. アプリ設定 & デザイン ---
+st.set_page_config(page_title="Owl v3.4.1", page_icon="🦉", layout="wide")
 
 # カラー定義
 COLOR_BG = "#FFFFFF"
@@ -39,7 +39,7 @@ st.markdown(f"""
     [data-testid="stSidebar"] {{ background-color: #FAFAFA; border-right: 1px solid {COLOR_BORDER}; }}
     [data-testid="stSidebar"] * {{ color: {COLOR_INK} !important; }}
 
-    /* 入力欄 (統一スタイル: 白背景・グレー枠) */
+    /* 入力欄 (白背景・グレー枠) */
     .stTextInput input, .stTextArea textarea, .stSelectbox div[data-baseweb="select"] {{
         background-color: {COLOR_BG} !important;
         color: {COLOR_INK} !important;
@@ -53,7 +53,7 @@ st.markdown(f"""
         box-shadow: 0 0 0 1px {COLOR_PRIMARY} !important;
     }}
 
-    /* ボタン (Inkカラー) */
+    /* ボタン */
     div.stButton > button {{
         background-color: {COLOR_INK} !important;
         color: #FFFFFF !important;
@@ -181,12 +181,12 @@ if not st.session_state['user']:
 current_user = st.session_state['user']
 user_name = get_user_name(current_user)
 
-# --- 4. レイアウト & ロジック復活 ---
+# --- 4. レイアウト & ロジック ---
 
 # ヘッダー
 st.markdown(f"""
 <div class="header-container">
-    <div class="app-title">🦉 Owl v3.4 <span style="font-size:0.8rem; font-weight:400; margin-left:10px; color:#999;">Stable Rollback</span></div>
+    <div class="app-title">🦉 Owl v3.4 <span style="font-size:0.8rem; font-weight:400; margin-left:10px; color:#999;">Stable</span></div>
     <div class="user-info">User: <b>{user_name}</b> | <a href="#" onclick="window.location.reload();" style="color:#333;">Logout</a></div>
 </div>
 """, unsafe_allow_html=True)
@@ -203,78 +203,57 @@ else:
     api_key = st.sidebar.text_input("API Key", type="password")
 client = OpenAI(api_key=api_key) if api_key else None
 
-# === 【重要】アダプティブ文章エンジンの復活 (v2.0 Logic) ===
+# アダプティブ設定
 adaptive_prompt = ""
 if menu in ["M1 SNS", "M2 記事", "M3 セールス"]:
-    st.sidebar.markdown("### 🎛 生成設定 (Adaptive)")
-    
-    # 媒体・目的定義 (v2.0と同等)
+    st.sidebar.markdown("### 🎛 生成設定")
     TARGET_MEDIA = {
-        "X (Twitter)": {"len": "140字以内", "tone": "共感・発見", "style": "短文・改行多め"},
-        "X (長文ポスト)": {"len": "500〜1000字", "tone": "ストーリーテリング", "style": "没入感のある物語"},
-        "note (記事)": {"len": "2000〜4000字", "tone": "専門家・解説", "style": "見出し付き構成"},
-        "note (販売LP)": {"len": "5000字以上", "tone": "情熱・解決策提示", "style": "PASONA完全版"},
-        "DM/LINE": {"len": "200〜400文字", "tone": "親密・私信", "style": "語りかけ"}
+        "X (Twitter)": {"len": "140字以内", "tone": "共感・発見"},
+        "X (長文)": {"len": "1000字", "tone": "ストーリー"},
+        "note (記事)": {"len": "3000字", "tone": "解説"},
+        "note (LP)": {"len": "5000字", "tone": "解決"},
+        "DM": {"len": "300字", "tone": "私信"}
     }
-    DEPTH_LEVELS = {
-        "Light (拡散狙い)": "広く浅く、誰にでも刺さる言葉で。",
-        "Standard (教育・信頼)": "なぜそうなるのか？という理由を含める。",
-        "Deep (成約・ファン化)": "深層心理まで掘り下げ、痛みを共有し、根本解決を示す。"
-    }
+    DEPTH_LEVELS = {"Light": "拡散", "Standard": "信頼", "Deep": "解決"}
     
     sel_media = st.sidebar.selectbox("媒体", list(TARGET_MEDIA.keys()))
     sel_depth = st.sidebar.selectbox("深さ", list(DEPTH_LEVELS.keys()))
     
     m_info = TARGET_MEDIA[sel_media]
     adaptive_prompt = (
-        f"\n【重要：出力設定（厳守）】\n"
-        f"・媒体: {sel_media} (目安文字数: {m_info['len']})\n"
-        f"・トーン: {m_info['tone']}\n"
-        f"・スタイル: {m_info['style']}\n"
-        f"・深さレベル: {sel_depth} ({DEPTH_LEVELS[sel_depth]})\n"
-        "※ 上記の設定に基づき、構成と分量を最適化してください。\n"
+        f"\n【出力設定】媒体:{sel_media}(目安{m_info['len']}), トーン:{m_info['tone']}, "
+        f"深さ:{sel_depth}({DEPTH_LEVELS[sel_depth]})\n"
     )
     
-    # 画像分析UI (M1のみ)
     if menu == "M1 SNS":
         st.sidebar.markdown("---")
         st.sidebar.write("👁️ 画像分析")
         up = st.file_uploader("Upload", type=["jpg","png"])
         if up and client:
-            if st.sidebar.button("分析実行"):
+            if st.sidebar.button("分析"):
                 with st.spinner("Analyzing..."):
                     res = analyze_image(client, up)
                     st.session_state['img_context'] = res
-                    st.sidebar.success("分析完了")
+                    st.sidebar.success("完了")
 
-# 共通チャットコンポーネント (v3.3 Design + v2.5 Logic)
+# 共通チャット
 def render_chat_interface(mode, base_system_prompt):
     if not client: st.warning("API Key Required"); return
     
-    # プロンプト結合
     full_prompt = base_system_prompt + adaptive_prompt
     if 'img_context' in st.session_state and menu == "M1 SNS":
-        full_prompt += f"\n[画像分析結果]: {st.session_state['img_context']}"
+        full_prompt += f"\n[画像分析]: {st.session_state['img_context']}"
     
-    # 思考プロセスの注入 (v2.5 Logic)
-    thinking_instruction = """
-    \n【思考プロセス】
-    回答を出力する前に、以下のステップで内容を構築してください。
-    1. 感情エミュレーション: ターゲット読者の「痛み」を具体的に想像する。
-    2. 具体化: 抽象的な言葉を、映像的な言葉に変換する。
-    3. 構成: 指定された媒体・文字数を満たす構成を組む。
-    4. 執筆: プロのカウンセラーとして、受容→分析→処方の順で書く。
-    """
-    full_prompt += thinking_instruction
+    # 思考プロセス (v2.5)
+    full_prompt += "\n【思考プロセス】1.感情エミュレーション 2.具体化 3.構成 4.執筆 (出力は結果のみ)"
 
     col_main, col_sub = st.columns([2, 1])
     key = f"chat_{current_user}_{mode}"
     
     if key not in st.session_state:
         st.session_state[key] = [{"role": "system", "content": full_prompt}]
-        st.session_state[key].append({"role": "assistant", "content": "準備完了。設定に合わせて生成します。"})
+        st.session_state[key].append({"role": "assistant", "content": "準備完了。"})
     
-    # システムプロンプト更新（設定変更を即時反映）
     st.session_state[key][0]["content"] = full_prompt
 
     with col_main:
@@ -297,22 +276,20 @@ def render_chat_interface(mode, base_system_prompt):
             if st.form_submit_button("送信"):
                 st.session_state[key].append({"role": "user", "content": user_input})
                 try:
-                    with st.spinner("Owl is thinking..."):
-                        # トークン数を最大化 (v2.5仕様)
+                    with st.spinner("Thinking..."):
                         res = client.chat.completions.create(model="gpt-3.5-turbo", messages=st.session_state[key], max_tokens=3000)
                     st.session_state[key].append({"role": "assistant", "content": res.choices[0].message.content})
                     st.rerun()
                 except Exception as e: st.error(str(e))
 
     with col_sub:
-        st.markdown("#### Information")
-        st.info("設定：\n" + adaptive_prompt.replace("\n", "  \n")) # 設定内容を表示
-        st.markdown("---")
-        st.markdown("#### My Tasks")
+        st.markdown("#### Info")
+        st.info(f"設定: {sel_media} / {sel_depth}" if adaptive_prompt else "標準モード")
+        st.markdown("#### Tasks")
         tasks = get_tasks(current_user).head(5)
         for i, t in tasks.iterrows():
             st.markdown(f'<div class="minimal-card">{t["title"]}</div>', unsafe_allow_html=True)
-            if st.button("完了", key=f"done_s_{t['task_id']}"): complete_task(t['task_id']); st.rerun()
+            if st.button("完了", key=f"d_s_{t['task_id']}"): complete_task(t['task_id']); st.rerun()
 
 # --- 各ページ ---
 
@@ -342,14 +319,14 @@ elif menu == "チームチャット":
         align = "right" if is_me else "left"
         st.markdown(f'<div style="text-align:{align}"><div class="{cls}">{c["message"]}</div><small>{c["user_id"]}</small></div>', unsafe_allow_html=True)
 
-# プロンプト定義 (v2.0/v2.5ベース)
-STYLE_GUIDE = "【基本スタイル】\n1.言語:日本語\n2.禁止:自分語り/ポエム/説教\n3.構成:受容→分析→処方\n4.態度:プロのカウンセラー"
+# プロンプト (v2.5ベース)
+STYLE = "【スタイル】\n1.言語:日本語\n2.禁止:自分語り/ポエム/説教\n3.構成:受容→分析→処方\n4.態度:プロのカウンセラー"
 
-elif menu == "M4 戦略":
-    render_chat_interface("M4 Strategy", f"戦略参謀です。{STYLE_GUIDE}")
+if menu == "M4 戦略":
+    render_chat_interface("M4 Strategy", f"戦略参謀です。{STYLE}")
 elif menu == "M1 SNS":
-    render_chat_interface("M1 SNS", f"SNS担当です。読者の心を代弁するポストを作成してください。{STYLE_GUIDE}")
+    render_chat_interface("M1 SNS", f"SNS担当です。読者の心を代弁するポストを作成してください。{STYLE}")
 elif menu == "M2 記事":
-    render_chat_interface("M2 Editor", f"編集者です。読者が納得する記事構成を作成してください。{STYLE_GUIDE}")
+    render_chat_interface("M2 Editor", f"編集者です。読者が納得する記事構成を作成してください。{STYLE}")
 elif menu == "M3 セールス":
-    render_chat_interface("M3 Sales", f"解決型セールスライターです。PASONAで長文レターを書いてください。{STYLE_GUIDE}")
+    render_chat_interface("M3 Sales", f"解決型セールスライターです。PASONAで長文レターを書いてください。{STYLE}")

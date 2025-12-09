@@ -5,14 +5,15 @@ from datetime import datetime
 from openai import OpenAI
 import base64
 
-# --- 1. アプリ設定 & ミニマルデザイン定義 ---
-st.set_page_config(page_title="Owl v3.2", page_icon="🦉", layout="wide")
+# --- 1. アプリ設定 & デザイン定義 ---
+st.set_page_config(page_title="Owl v3.3", page_icon="🦉", layout="wide")
 
-# カラー定義
+# カラーパレット定義
 COLOR_BG = "#FFFFFF"
-COLOR_ACCENT = "#F7D9E3"
-COLOR_TEXT = "#222222"
-COLOR_BORDER = "rgba(0,0,0,0.06)"
+COLOR_PRIMARY = "#FADDE1" # アクセントピンク
+COLOR_INK = "#111827"     # 文字・濃いUI
+COLOR_BORDER = "#E5E7EB"
+COLOR_CARD_BG = "#F9FAFB" # 薄いグレー背景
 
 st.markdown(f"""
 <style>
@@ -20,7 +21,7 @@ st.markdown(f"""
     
     html, body, [class*="css"] {{
         font-family: 'Noto Sans JP', sans-serif;
-        color: {COLOR_TEXT};
+        color: {COLOR_INK};
         background-color: {COLOR_BG};
     }}
 
@@ -42,87 +43,138 @@ st.markdown(f"""
     .app-title {{
         font-size: 1.5rem;
         font-weight: 700;
-        color: {COLOR_TEXT};
+        color: {COLOR_INK};
         letter-spacing: 0.05em;
+        display: flex;
+        align-items: center;
+        gap: 10px;
     }}
     .user-info {{
         font-size: 0.9rem;
-        color: #666;
+        color: #6B7280;
+    }}
+    .user-info a {{
+        color: {COLOR_INK};
+        text-decoration: none;
+        font-weight: 500;
+        margin-left: 10px;
     }}
 
-    /* --- サイドバー（ナビゲーション） --- */
+    /* --- サイドバー --- */
     [data-testid="stSidebar"] {{
-        background-color: #FAFAFA; /* ほんの少しだけグレーにして区別 */
+        background-color: #FAFAFA;
         border-right: 1px solid {COLOR_BORDER};
     }}
     [data-testid="stSidebar"] * {{
-        color: {COLOR_TEXT} !important;
+        color: {COLOR_INK} !important;
+    }}
+    /* サイドバーのラジオボタン選択時 */
+    div[role="radiogroup"] > label > div:first-child {{
+        background-color: {COLOR_PRIMARY} !important;
+        border-color: {COLOR_PRIMARY} !important;
     }}
 
-    /* --- 入力欄 (ミニマル統一) --- */
+    /* --- 入力欄 (統一スタイル) --- */
     .stTextInput input, .stTextArea textarea, .stSelectbox div[data-baseweb="select"] {{
         background-color: {COLOR_BG} !important;
-        color: {COLOR_TEXT} !important;
+        color: {COLOR_INK} !important;
         border: 1px solid {COLOR_BORDER} !important;
-        border-radius: 8px !important; /* 少し丸める程度 */
-        padding: 12px !important;
+        border-radius: 8px !important;
+        padding: 12px 16px !important;
         box-shadow: none !important;
     }}
+    /* フォーカス時 */
     .stTextInput input:focus, .stTextArea textarea:focus {{
-        border-color: {COLOR_ACCENT} !important;
+        border-color: {COLOR_PRIMARY} !important;
+        box-shadow: 0 0 0 1px {COLOR_PRIMARY} !important;
     }}
 
-    /* --- ボタン (ACCENTカラー) --- */
+    /* --- ボタン (Inkカラー統一) --- */
     div.stButton > button {{
-        background-color: {COLOR_ACCENT} !important;
-        color: {COLOR_TEXT} !important;
+        background-color: {COLOR_INK} !important;
+        color: #FFFFFF !important;
         border: none !important;
         border-radius: 8px !important;
         font-weight: 500 !important;
         padding: 0.5rem 1.2rem !important;
+        height: 40px !important;
         box-shadow: none !important;
     }}
     div.stButton > button:hover {{
-        opacity: 0.8;
+        background-color: #374151 !important; /* 少し明るいグレー */
     }}
 
-    /* --- カード (枠線のみ) --- */
-    .minimal-card {{
-        background-color: {COLOR_BG};
-        border: 1px solid {COLOR_BORDER};
-        border-radius: 8px;
-        padding: 1.2rem;
-        margin-bottom: 1rem;
-    }}
-    .card-title {{
-        font-weight: 700;
-        margin-bottom: 0.5rem;
-        font-size: 1rem;
-        border-left: 4px solid {COLOR_ACCENT};
-        padding-left: 10px;
-    }}
-
-    /* --- チャットバブルのカスタマイズ --- */
-    /* ユーザーのメッセージ */
-    [data-testid="stChatMessage"][data-testid="user"] {{
-        background-color: {COLOR_ACCENT};
-        border-radius: 12px;
-        padding: 1rem;
-        margin-bottom: 0.5rem;
+    /* --- 評価ボタン (Primary Pink) --- */
+    .feedback-btn {{
+        background-color: {COLOR_PRIMARY};
+        color: {COLOR_INK};
         border: none;
+        border-radius: 20px;
+        padding: 4px 12px;
+        font-size: 0.8rem;
+        cursor: pointer;
+        margin-right: 8px;
     }}
-    /* アシスタントのメッセージ */
-    [data-testid="stChatMessage"][data-testid="assistant"] {{
-        background-color: {COLOR_BG};
+    .feedback-btn:hover {{
+        background-color: #F9C8D0;
+    }}
+
+    /* --- チャットバブル --- */
+    /* 自分 (右 / Primary Pink) */
+    .chat-bubble-user {{
+        background-color: {COLOR_PRIMARY};
+        color: {COLOR_INK};
+        padding: 12px 16px;
+        border-radius: 12px 12px 0 12px;
+        margin-bottom: 8px;
+        max-width: 80%;
+        margin-left: auto;
+        font-size: 0.95rem;
+    }}
+    /* 相手/Owl (左 / Gray) */
+    .chat-bubble-owl {{
+        background-color: {COLOR_CARD_BG};
+        color: {COLOR_INK};
         border: 1px solid {COLOR_BORDER};
-        border-radius: 12px;
-        padding: 1rem;
-        margin-bottom: 0.5rem;
+        padding: 12px 16px;
+        border-radius: 12px 12px 12px 0;
+        margin-bottom: 8px;
+        max-width: 80%;
+        margin-right: auto;
+        font-size: 0.95rem;
     }}
     
-    /* アバターアイコンを消す（あるいは小さくする） */
+    /* Streamlit標準のチャットメッセージのスタイル上書き */
+    [data-testid="stChatMessage"] {{
+        background-color: transparent !important;
+    }}
     [data-testid="stChatMessageAvatarBackground"] {{
-        display: none;
+        background-color: {COLOR_INK} !important;
+        color: white !important;
+    }}
+
+    /* --- カード --- */
+    .minimal-card {{
+        background-color: {COLOR_CARD_BG};
+        border: 1px solid {COLOR_BORDER};
+        border-radius: 8px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+    }}
+    
+    /* ユーティリティ */
+    .text-sm {{ font-size: 0.85rem; color: #6B7280; }}
+    .text-bold {{ font-weight: 700; }}
+    
+    /* ログインボックス */
+    .login-box {{
+        max-width: 400px;
+        margin: 100px auto;
+        padding: 40px;
+        background: {COLOR_CARD_BG};
+        border-radius: 12px;
+        text-align: center;
+        border: 1px solid {COLOR_BORDER};
     }}
 </style>
 """, unsafe_allow_html=True)
@@ -198,14 +250,22 @@ def save_feedback(pid, module, content, rating):
     conn.execute("INSERT INTO feedback (project_id, module, content, rating, created_at) VALUES (?, ?, ?, ?, ?)", (pid, module, content, rating, datetime.now()))
     conn.commit()
     conn.close()
-    st.toast("Thank you!")
+    st.toast("Feedback saved")
 
 # --- ログイン ---
 if 'user' not in st.session_state: st.session_state['user'] = None
 if not st.session_state['user']:
-    c1, c2, c3 = st.columns([1,1,1])
+    st.markdown(f"""
+    <div class="login-box">
+        <h1>🦉 Owl v3.3</h1>
+        <p style="color:#666;">Athenalink Director AI</p>
+        <br>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # ログインフォームを中央寄せするためにカラムで調整
+    _, c2, _ = st.columns([1,1,1])
     with c2:
-        st.markdown(f"<h1 style='text-align:center; color:{COLOR_TEXT};'>Owl v3.2</h1>", unsafe_allow_html=True)
         with st.form("login"):
             uid = st.selectbox("USER", ["ren", "shu"])
             if st.form_submit_button("LOGIN"):
@@ -221,175 +281,172 @@ user_name = get_user_name(current_user)
 # ヘッダー (全ページ共通)
 st.markdown(f"""
 <div class="header-container">
-    <div class="app-title">🦉 Owl v3.2</div>
-    <div class="user-info">User: <b>{user_name}</b> | <a href="#" onclick="window.location.reload();">Logout</a></div>
+    <div class="app-title">🦉 Owl v3.3</div>
+    <div class="user-info">
+        User: <b>{user_name}</b> | <a href="#" onclick="window.location.reload();">Logout</a>
+    </div>
 </div>
 """, unsafe_allow_html=True)
 
-# サイドバー (ナビゲーションのみ)
+# サイドバー
 st.sidebar.markdown("### MENU")
-menu = st.sidebar.radio("", ["ダッシュボード", "チームチャット", "M4 戦略", "M1 SNS", "M2 記事", "M3 セールス"])
+menu_options = ["ダッシュボード", "チームチャット", "M4 戦略", "M1 SNS", "M2 記事", "M3 セールス"]
+menu = st.sidebar.radio("", menu_options)
+
 st.sidebar.markdown("---")
+# API Key設定
 if "OPENAI_API_KEY" in st.secrets:
     api_key = st.secrets["OPENAI_API_KEY"]
 else:
-    api_key = st.sidebar.text_input("API Key", type="password")
+    api_key = st.sidebar.text_input("OpenAI API Key", type="password")
 client = OpenAI(api_key=api_key) if api_key else None
 
-if st.sidebar.button("ログアウト"):
+if st.sidebar.button("Logout"):
     st.session_state['user'] = None
     st.rerun()
 
-# --- 共通チャットコンポーネント ---
-def render_chat_interface(mode, system_prompt, right_column_content=None):
-    if not client: st.warning("API Key Required"); return
+# --- コンテンツロジック ---
+
+# 共通チャットコンポーネント
+def render_chat_interface(mode, system_prompt, sidebar_content=None):
+    if not client: st.warning("Please set API Key"); return
     
-    # 2カラムレイアウト (左:チャット / 右:サイドパネル)
-    col_chat, col_side = st.columns([1.8, 1])
+    # メインコンテンツエリア
+    st.markdown(f"### {mode}")
+    st.markdown(f'<p class="text-sm">Owl Assistant for {mode}</p>', unsafe_allow_html=True)
+    
+    # レイアウト分割 (チャットメイン + 右サイド情報)
+    col_main, col_sub = st.columns([2, 1])
     
     key = f"chat_{current_user}_{mode}"
     if key not in st.session_state:
         st.session_state[key] = [{"role": "system", "content": system_prompt}]
         st.session_state[key].append({"role": "assistant", "content": "準備完了。指示をください。"})
 
-    with col_chat:
-        st.markdown(f"#### {mode}")
-        # チャット履歴表示
+    with col_main:
+        # チャットログ
         for i, msg in enumerate(st.session_state[key]):
-            if msg["role"] != "system":
-                # カスタムCSSでバブル化
-                with st.chat_message(msg["role"]):
-                    st.write(msg["content"])
-                    if msg["role"] == "assistant" and i > 0:
-                        c1, c2, c3 = st.columns([1,1,8])
-                        with c1: 
-                            if st.button("👍", key=f"up_{key}_{i}"): save_feedback("GEN", mode, msg["content"], "good")
-                        with c2: 
-                            if st.button("👎", key=f"down_{key}_{i}"): save_feedback("GEN", mode, msg["content"], "bad")
+            if msg["role"] == "user":
+                st.markdown(f'<div class="chat-bubble-user">{msg["content"]}</div>', unsafe_allow_html=True)
+            elif msg["role"] == "assistant":
+                st.markdown(f'<div class="chat-bubble-owl">{msg["content"]}</div>', unsafe_allow_html=True)
+                
+                # 評価ボタン
+                c1, c2 = st.columns([1, 8])
+                with c1:
+                    if st.button("👍", key=f"good_{key}_{i}"): save_feedback("GEN", mode, msg["content"], "good")
+                with c2:
+                    if st.button("👎", key=f"bad_{key}_{i}"): save_feedback("GEN", mode, msg["content"], "bad")
 
-        st.markdown("---")
-        # 入力フォーム (下部)
+        st.markdown("<br>", unsafe_allow_html=True)
+        
+        # 入力フォーム
         with st.form(key=f"form_{mode}", clear_on_submit=True):
-            user_input = st.text_area("指示を入力...", height=100)
-            c1, c2 = st.columns([4, 1])
+            user_input = st.text_area("指示を入力...", height=120)
+            c1, c2 = st.columns([5, 1])
             with c2:
                 send = st.form_submit_button("送信")
         
         if send and user_input:
             st.session_state[key].append({"role": "user", "content": user_input})
             try:
-                with st.spinner("Writing..."):
+                with st.spinner("Owl is thinking..."):
                     res = client.chat.completions.create(model="gpt-3.5-turbo", messages=st.session_state[key], max_tokens=2000)
                 st.session_state[key].append({"role": "assistant", "content": res.choices[0].message.content})
                 st.rerun()
             except Exception as e: st.error(str(e))
 
-    with col_side:
-        # 右サイドパネル（タスクや設定など）
-        st.markdown('<div class="card-title">Information</div>', unsafe_allow_html=True)
-        if right_column_content:
-            right_column_content()
+    with col_sub:
+        # 右サイド情報パネル
+        st.markdown("#### Information")
+        if sidebar_content:
+            sidebar_content()
         
-        # 共通のタスク表示
-        st.markdown('<div class="card-title" style="margin-top:20px;">My Tasks</div>', unsafe_allow_html=True)
+        st.markdown("---")
+        st.markdown("#### My Tasks")
         tasks = get_tasks(current_user).head(5)
         if not tasks.empty:
             for i, t in tasks.iterrows():
                 st.markdown(f"""
-                <div class="minimal-card" style="padding:0.8rem;">
-                    <small style="color:#888;">{t['priority']}</small><br>
-                    <b>{t['title']}</b>
+                <div class="minimal-card" style="padding:1rem;">
+                    <div class="text-sm">{t['priority']}</div>
+                    <div class="text-bold">{t['title']}</div>
                 </div>
                 """, unsafe_allow_html=True)
-                if st.button("完了", key=f"done_side_{t['task_id']}"): complete_task(t['task_id']); st.rerun()
+                if st.button("完了", key=f"done_sub_{t['task_id']}"): complete_task(t['task_id']); st.rerun()
         else:
             st.info("No tasks.")
 
-# --- 各ページの内容 ---
+# --- 各ページ ---
 
 if menu == "ダッシュボード":
-    c1, c2 = st.columns([2, 1])
+    st.info("左のメニューからモードを選択してください。")
+    
+    c1, c2 = st.columns(2)
     with c1:
-        st.markdown("### Dashboard")
-        st.info("左のメニューからモードを選択してください。")
-        
-        # チームチャットプレビュー
-        st.markdown('<div class="card-title">Team Chat (Latest)</div>', unsafe_allow_html=True)
+        st.markdown("### Team Chat (Latest)")
         chats = get_team_chat().head(3)
         for i, c in chats.iterrows():
             st.markdown(f"""
             <div class="minimal-card">
-                <small>{c['user_id']} • {c['created_at']}</small><br>
-                {c['message']}
+                <div class="text-sm">{c['user_id']} • {c['created_at']}</div>
+                <div>{c['message']}</div>
             </div>
             """, unsafe_allow_html=True)
-
+            
     with c2:
-        st.markdown('<div class="card-title">Quick Add Task</div>', unsafe_allow_html=True)
+        st.markdown("### Quick Task")
         with st.form("quick_task"):
             t = st.text_input("タスク名")
             p = st.selectbox("優先度", ["High", "Middle"])
             if st.form_submit_button("追加"):
                 add_task("general", t, current_user, p)
                 st.rerun()
-        
-        st.markdown('<div class="card-title" style="margin-top:20px;">My Tasks</div>', unsafe_allow_html=True)
-        tasks = get_tasks(current_user)
-        for i, t in tasks.iterrows():
-            st.markdown(f'<div class="minimal-card">{t["title"]}</div>', unsafe_allow_html=True)
 
 elif menu == "チームチャット":
-    c1, c2 = st.columns([2, 1])
-    with c1:
-        st.markdown("### Team Chat")
-        with st.form("team_chat_form", clear_on_submit=True):
-            msg = st.text_area("メッセージ", height=80)
-            if st.form_submit_button("送信"):
+    st.markdown("### Team Chat")
+    st.markdown('<p class="text-sm">RenとShuの共有チャット。会話内容はOwlの学習に利用されます。</p>', unsafe_allow_html=True)
+    
+    # チャットログ表示
+    chats = get_team_chat()
+    for i, c in chats.iterrows():
+        is_me = c['user_id'] == current_user
+        cls = "chat-bubble-user" if is_me else "chat-bubble-owl" # 相手はOwlスタイル（白背景）で代用
+        align = "right" if is_me else "left"
+        
+        st.markdown(f"""
+        <div style="text-align:{align};">
+            <div style="display:inline-block; text-align:left;" class="{cls}">
+                <div style="font-size:0.75rem; color:#666; margin-bottom:4px;">{c['user_id']}</div>
+                {c['message']}
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    st.markdown("---")
+    with st.form("team_chat_form", clear_on_submit=True):
+        c1, c2 = st.columns([5, 1])
+        msg = c1.text_area("メッセージ", height=60)
+        with c2:
+            st.write("")
+            if st.form_submit_button("送信") and msg:
                 send_team_chat(current_user, msg)
                 st.rerun()
-        
-        chats = get_team_chat()
-        for i, c in chats.iterrows():
-            is_me = c['user_id'] == current_user
-            # チャットバブル風表示（HTML）
-            bg = "#F7D9E3" if is_me else "#FFFFFF"
-            border = "none" if is_me else "1px solid rgba(0,0,0,0.06)"
-            align = "right" if is_me else "left"
-            st.markdown(f"""
-            <div style="text-align:{align}; margin-bottom:10px;">
-                <div style="display:inline-block; background:{bg}; border:{border}; padding:10px 15px; border-radius:12px; text-align:left; max-width:80%;">
-                    <div style="font-size:0.75rem; color:#666; margin-bottom:4px;">{c['user_id']}</div>
-                    {c['message']}
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
-            
-    with c2:
-        st.markdown('<div class="card-title">Members</div>', unsafe_allow_html=True)
-        st.write("• Ren (Owner)")
-        st.write("• Shu (Member)")
 
 elif menu == "M1 SNS":
-    def m1_sidebar():
-        st.write("SNS用の画像分析")
-        up = st.file_uploader("画像アップロード", type=["jpg","png"])
+    def m1_side():
+        st.write("画像分析")
+        up = st.file_uploader("Upload", type=["jpg","png"])
         if up and client:
-            if st.button("分析実行"):
+            if st.button("分析"):
                 res = analyze_image(client, up)
                 st.session_state['img_context'] = res
                 st.success("完了")
     
     prompt = "SNS担当です。読者の心を代弁するポストを作成してください。"
-    if 'img_context' in st.session_state: prompt += f"\n[画像分析]: {st.session_state['img_context']}"
-    render_chat_interface("M1 SNS", prompt, m1_sidebar)
+    if 'img_context' in st.session_state: prompt += f"\n[画像分析結果]: {st.session_state['img_context']}"
+    render_chat_interface("M1 SNS", prompt, m1_side)
 
 elif menu == "M4 戦略": render_chat_interface("M4 Strategy", "戦略参謀です。")
 elif menu == "M2 記事": render_chat_interface("M2 Editor", "編集者です。")
 elif menu == "M3 セールス": render_chat_interface("M3 Sales", "セールスライターです。")
-elif menu == "キャンペーン設計":
-    st.markdown("### Campaign Planner")
-    with st.form("camp"):
-        target = st.text_input("目的")
-        span = st.selectbox("期間", ["7days", "14days"])
-        if st.form_submit_button("作成"):
-            render_chat_interface("Planner", f"目的:{target}, 期間:{span} の計画を立てて。")

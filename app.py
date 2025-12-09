@@ -7,118 +7,108 @@ import base64
 import time
 
 # --- 1. アプリ設定 & デザイン刷新 ---
-# Owlのアイコンのみ残します
 st.set_page_config(page_title="Owl v3.0", page_icon="🦉", layout="wide")
 
-# カスタムCSS (桜テーマ・ミニマル・丸みUI)
+# カスタムCSS (文字色修正版)
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap');
     
     :root {
-        /* カラーパレット定義 */
-        --bg-pink-pale: #fff3f5; /* 背景：非常に淡いピンク */
-        --bg-pink-muted: #f3e0e6; /* ツールバー：少し濃い落ち着いたピンク */
-        --text-black: #000000; /* 文字色：黒 */
-        --border-color: #e0c0d0; /* 境界線：淡いピンクグレー */
-        --input-bg: #ffffff; /* 入力欄背景：白 */
+        --bg-pink-pale: #fff3f5;
+        --bg-pink-muted: #f3e0e6;
+        --text-black: #333333;
+        --border-color: #e0c0d0;
     }
 
     html, body, [class*="css"] {
         font-family: 'Noto Sans JP', sans-serif;
-        color: var(--text-black) !important; /* 基本文字色を黒で統一 */
+        color: var(--text-black);
     }
 
-    /* --- 全体の背景設定 (桜の日本画風) --- */
+    /* 背景設定 */
     .stApp {
         background-color: var(--bg-pink-pale);
-        /* 【ここに背景画像を設定します】
-           以下の url('...') の中に、使用したい「日本画風の桜の画像URL」を入れてください。
-           画像がない場合は、現在の淡いグラデーションが適用されます。
-        */
-        background-image: linear-gradient(to bottom, rgba(255,243,245,0.9), rgba(255,255,255,0.5));
-        background-size: cover;
+        background-image: linear-gradient(to bottom, rgba(255,243,245,0.9), rgba(255,255,255,0.6));
         background-attachment: fixed;
+        background-size: cover;
     }
 
-    /* --- サイドバー (ツールバー) --- */
+    /* ヘッダー */
+    .main-header {
+        background: rgba(255, 255, 255, 0.85);
+        padding: 1.5rem;
+        border-radius: 15px;
+        margin-bottom: 2rem;
+        border: 1px solid var(--border-color);
+        box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    }
+    .main-header h1 {
+        color: #333333 !important;
+        margin: 0;
+        font-size: 2rem;
+        font-weight: 700;
+    }
+    .main-header p {
+        color: #555555 !important;
+        margin-top: 0.5rem;
+        font-size: 1rem;
+    }
+
+    /* --- 重要：入力欄の文字色修正 --- */
+    /* テキスト入力、エリア、セレクトボックスの文字を強制的に黒くする */
+    .stTextInput input, .stTextArea textarea {
+        color: #333333 !important;
+        -webkit-text-fill-color: #333333 !important;
+        caret-color: #333333 !important;
+        background-color: #ffffff !important;
+        border: 1px solid var(--border-color) !important;
+        border-radius: 15px !important;
+    }
+    
+    /* セレクトボックスの選択値 */
+    .stSelectbox div[data-baseweb="select"] div {
+        color: #333333 !important;
+        -webkit-text-fill-color: #333333 !important;
+    }
+    
+    /* チャット入力欄 */
+    .stChatInput textarea {
+        background-color: #ffffff !important;
+        color: #333333 !important;
+        border-radius: 20px !important;
+    }
+
+    /* サイドバー */
     [data-testid="stSidebar"] {
         background-color: var(--bg-pink-muted);
         border-right: 1px solid var(--border-color);
     }
-    [data-testid="stSidebar"] * {
-        color: var(--text-black) !important;
-    }
-
-    /* --- ヘッダー --- */
-    .main-header {
-        background: rgba(255, 255, 255, 0.8); /* 半透明の白で背景を透かす */
-        padding: 1.5rem;
-        border-radius: 20px; /* 丸み */
-        margin-bottom: 2rem;
-        border: 1px solid var(--border-color);
-    }
-    .main-header h1 {
-        color: var(--text-black) !important;
-        margin: 0;
-        font-size: 1.8rem;
-        font-weight: 700;
-    }
-    .main-header p {
+    [data-testid="stSidebar"] h1, [data-testid="stSidebar"] h2, [data-testid="stSidebar"] h3, [data-testid="stSidebar"] label, [data-testid="stSidebar"] span {
         color: #333333 !important;
-        margin-top: 0.5rem;
-        font-size: 0.9rem;
     }
 
-    /* --- 入力フィールド (ChatGPT風の丸み) --- */
-    /* テキスト入力、テキストエリア、セレクトボックス */
-    .stTextInput input, .stTextArea textarea, div[data-baseweb="select"] > div {
-        border-radius: 25px !important; /* 強い丸み */
-        border: 1px solid var(--border-color) !important;
-        background-color: var(--input-bg) !important;
-        color: var(--text-black) !important;
-        padding: 10px 15px !important;
-        box-shadow: none !important;
-    }
-    /* フォーカス時の強調 */
-    .stTextInput input:focus, .stTextArea textarea:focus {
-        border-color: #d0a0b0 !important;
-        box-shadow: 0 0 0 2px rgba(208, 160, 176, 0.2) !important;
-    }
-    
-    /* チャット入力欄専用のスタイル */
-    [data-testid="stChatInput"] textarea {
-         border-radius: 25px !important;
-    }
-
-    /* --- ボタン --- */
+    /* ボタン */
     div.stButton > button {
-        background-color: var(--bg-pink-muted);
-        color: var(--text-black);
+        background-color: #ffffff;
+        color: #333333;
         border: 1px solid var(--border-color);
-        border-radius: 20px; /* 丸み */
-        padding: 0.5rem 1.5rem;
-        font-weight: normal;
-        transition: all 0.3s ease;
+        border-radius: 20px;
+        font-weight: bold;
+        transition: all 0.2s;
     }
     div.stButton > button:hover {
         background-color: #e0c0d0;
-        transform: translateY(-1px);
-    }
-
-    /* --- カード風コンテナ --- */
-    .card {
-        background-color: rgba(255, 255, 255, 0.9);
-        padding: 1.5rem;
-        border-radius: 20px; /* 丸み */
-        margin-bottom: 1rem;
-        border: 1px solid var(--border-color);
+        border-color: #333333;
     }
     
-    /* --- その他調整 --- */
-    /* ラジオボタンの選択肢など */
-    .stRadio label {
-        color: var(--text-black) !important;
+    /* カード */
+    .card {
+        background-color: rgba(255, 255, 255, 0.9);
+        padding: 1rem;
+        border-radius: 15px;
+        margin-bottom: 10px;
+        border: 1px solid var(--border-color);
     }
 </style>
 """, unsafe_allow_html=True)
@@ -182,17 +172,23 @@ def get_team_chat():
     conn.close()
     return df
 
-# --- 3. ログイン処理 (絵文字削除) ---
+# --- 3. ログイン処理 ---
 if 'user' not in st.session_state:
     st.session_state['user'] = None
 
 if not st.session_state['user']:
-    # Owlのアイコンのみ残す
-    st.markdown("<div style='text-align: center; margin-top: 50px;'><h1>🦉 Owl v3.0</h1><p>Director AI for Athenalink</p></div>", unsafe_allow_html=True)
+    # ログイン画面の表記追加
+    st.markdown("""
+    <div style='text-align: center; margin-top: 50px; background: rgba(255,255,255,0.8); padding: 30px; border-radius: 20px;'>
+        <h1>🦉 Owl v3.0</h1>
+        <p>Director AI for Athenalink</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
     c1, c2, c3 = st.columns([1, 2, 1])
     with c2:
         with st.form("login_form"):
-            uid = st.selectbox("ログインユーザーを選択", ["ren", "shu"])
+            uid = st.selectbox("ユーザーを選択してください", ["ren", "shu"])
             if st.form_submit_button("ログイン"):
                 st.session_state['user'] = uid
                 st.rerun()
@@ -201,66 +197,76 @@ if not st.session_state['user']:
 current_user = st.session_state['user']
 user_name = get_user_name(current_user)
 
-# --- 4. メインUI (絵文字削除・デザイン適用) ---
+# --- 4. メインUI ---
 
 # サイドバー
-st.sidebar.markdown(f"### ログイン中: **{user_name}**")
+st.sidebar.markdown(f"## 👤 {user_name}")
 if st.sidebar.button("ログアウト"):
     st.session_state['user'] = None
     st.rerun()
 
 st.sidebar.markdown("---")
-# メニューから絵文字を削除
-menu = st.sidebar.radio("MENU", ["ダッシュボード", "チームチャット", "キャンペーン設計", "戦略 (Owl)", "SNS運用", "セールス"])
-
-# APIキー設定
+# APIキー設定（サイドバーの最初に入力欄を配置）
 if "OPENAI_API_KEY" in st.secrets:
     api_key = st.secrets["OPENAI_API_KEY"]
 else:
-    api_key = st.sidebar.text_input("OpenAI API Key", type="password")
-client = OpenAI(api_key=api_key) if api_key else None
+    api_key = st.sidebar.text_input("OpenAI API Key", type="password", help="ここにAPIキーを入力")
 
-# 共通チャットUI (ヘッダーの絵文字削除)
+menu = st.sidebar.radio("MENU", ["ダッシュボード", "チームチャット", "キャンペーン設計", "戦略 (Owl)", "SNS運用", "セールス"])
+
+client = None
+if api_key:
+    try:
+        client = OpenAI(api_key=api_key)
+    except:
+        st.sidebar.error("APIキーが無効です")
+
+# 共通チャットUI
 def render_owl_chat(mode, system_prompt):
-    if not client: st.warning("API Keyが必要です"); return
+    if not client:
+        st.warning("👈 左のサイドバーにOpenAI APIキーを入力してください。")
+        return
     
     st.markdown(f"### {mode}")
     key = f"chat_{current_user}_{mode}"
     if key not in st.session_state:
         st.session_state[key] = [{"role": "system", "content": system_prompt}]
-        st.session_state[key].append({"role": "assistant", "content": f"{user_name}さん、こんにちは。何かお手伝いしますか？"})
+        st.session_state[key].append({"role": "assistant", "content": f"{user_name}さん、準備完了です。指示をください。"})
     
     for msg in st.session_state[key]:
         if msg["role"] != "system":
             with st.chat_message(msg["role"]):
                 st.write(msg["content"])
     
-    # チャット入力欄のプレースホルダーも変更
-    if prompt := st.chat_input("メッセージを送信..."):
+    if prompt := st.chat_input("ここに指示を入力..."):
         st.session_state[key].append({"role": "user", "content": prompt})
         with st.chat_message("user"): st.write(prompt)
         
         with st.chat_message("assistant"):
-            stream = client.chat.completions.create(
-                model="gpt-3.5-turbo",
-                messages=st.session_state[key],
-                stream=True,
-            )
-            response = st.write_stream(stream)
-        st.session_state[key].append({"role": "assistant", "content": response})
+            try:
+                stream = client.chat.completions.create(
+                    model="gpt-3.5-turbo",
+                    messages=st.session_state[key],
+                    stream=True,
+                )
+                response = st.write_stream(stream)
+                st.session_state[key].append({"role": "assistant", "content": response})
+            except Exception as e:
+                st.error(f"エラーが発生しました: {e}")
 
 # コンテンツ
 if menu == "ダッシュボード":
+    # ホーム画面の表記追加
     st.markdown(f"""
     <div class="main-header">
-        <h1>Welcome back, {user_name}.</h1>
-        <p>今日もアテナリンクの事業を進めましょう。</p>
+        <h1>🦉 Owl v3.0</h1>
+        <p>Welcome back, <b>{user_name}</b>.</p>
+        <p style="font-size: 0.8rem; color: #777 !important;">Athenalink Operation System</p>
     </div>
     """, unsafe_allow_html=True)
     
     c1, c2 = st.columns(2)
     with c1:
-        # 絵文字削除
         st.markdown("### 今日のタスク (Top 3)")
         my_tasks = get_tasks(current_user).head(3)
         if not my_tasks.empty:
@@ -269,7 +275,7 @@ if menu == "ダッシュボード":
                     st.markdown(f"""
                     <div class="card">
                         <b>{task['title']}</b><br>
-                        <span style="color:var(--text-black); font-size:0.8em;">優先度: {task['priority']}</span>
+                        <span style="font-size:0.8em; color:#d9534f;">優先度: {task['priority']}</span>
                     </div>
                     """, unsafe_allow_html=True)
                     if st.button(f"完了 (ID:{task['task_id']})", key=f"done_{task['task_id']}"):
@@ -279,7 +285,6 @@ if menu == "ダッシュボード":
             st.info("現在タスクはありません。")
             
     with c2:
-        # 絵文字削除
         st.markdown("### チームチャット (最新)")
         chats = get_team_chat().head(3)
         for i, chat in chats.iterrows():
@@ -288,12 +293,12 @@ if menu == "ダッシュボード":
             st.markdown("---")
 
 elif menu == "チームチャット":
-    # 絵文字削除
     st.markdown("### Team Room (Ren & Shu)")
     
     with st.form("chat_form", clear_on_submit=True):
-        msg = st.text_input("メッセージ", placeholder="連絡事項や相談など...")
-        if st.form_submit_button("送信") and msg:
+        c1, c2 = st.columns([4, 1])
+        msg = c1.text_input("メッセージ", placeholder="連絡事項を入力...")
+        if c2.form_submit_button("送信") and msg:
             send_team_chat(current_user, msg)
             st.rerun()
     
@@ -301,26 +306,22 @@ elif menu == "チームチャット":
     for i, chat in chats.iterrows():
         is_me = chat['user_id'] == current_user
         align = "text-align: right;" if is_me else ""
-        # チャット吹き出しの色も調整
         bg = "#f0c0d0" if is_me else "#ffffff" 
-        border = "none" if is_me else "1px solid #e0c0d0"
         st.markdown(f"""
         <div style="{align} margin-bottom: 10px;">
-            <small>{chat['user_id']} {chat['created_at']}</small><br>
-            <span style="background-color: {bg}; border: {border}; padding: 8px 12px; border-radius: 15px; display: inline-block; color: var(--text-black);">
+            <small style="color:#666;">{chat['user_id']} {chat['created_at']}</small><br>
+            <span style="background-color: {bg}; padding: 8px 12px; border-radius: 15px; display: inline-block; border: 1px solid #ddd;">
                 {chat['message']}
             </span>
         </div>
         """, unsafe_allow_html=True)
     
     st.markdown("---")
-    # ボタンの絵文字も削除
     if st.button("Owlにこのチャットを要約させる"):
         chat_text = "\n".join([f"{r['user_id']}: {r['message']}" for i, r in chats.iterrows()])
         render_owl_chat("Chat Summary", f"以下のチームチャットのログを要約し、TODOがあれば抽出してください。\n\n{chat_text}")
 
 elif menu == "キャンペーン設計":
-    # 絵文字削除
     st.markdown("### Campaign Planner")
     c1, c2, c3 = st.columns(3)
     goal = c1.text_input("目的", "note販売")

@@ -1,2 +1,5 @@
 streamlit
 openai
+pandas
+requests
+beautifulsoup4

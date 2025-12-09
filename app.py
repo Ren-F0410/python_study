@@ -6,7 +6,7 @@ from openai import OpenAI
 import base64
 
 # --- 1. アプリ設定 & ChatGPT風ダークデザイン ---
-st.set_page_config(page_title="Owl v3.5", page_icon="🦉", layout="wide")
+st.set_page_config(page_title="Owl v3.5.1", page_icon="🦉", layout="wide")
 
 # カラーパレット定義
 COLOR_BG_MAIN = "#0B1020"       # メイン背景 (Deep Navy)
@@ -27,13 +27,12 @@ st.markdown(f"""
         background-color: {COLOR_BG_MAIN};
     }}
 
-    /* 全体の背景 */
     .stApp {{
         background-color: {COLOR_BG_MAIN};
         background-image: none;
     }}
 
-    /* --- サイドバー --- */
+    /* サイドバー */
     [data-testid="stSidebar"] {{
         background-color: {COLOR_BG_SIDE};
         border-right: 1px solid {COLOR_BORDER};
@@ -41,15 +40,13 @@ st.markdown(f"""
     [data-testid="stSidebar"] * {{
         color: {COLOR_TEXT_MAIN} !important;
     }}
-    /* サイドバー内の入力欄 */
     [data-testid="stSidebar"] input {{
         background-color: {COLOR_BG_CARD} !important;
         color: {COLOR_TEXT_MAIN} !important;
         border: 1px solid {COLOR_BORDER} !important;
     }}
 
-    /* --- 入力欄 (ChatGPT風) --- */
-    /* テキスト入力、エリア、セレクトボックス */
+    /* 入力欄 (ChatGPT風) */
     .stTextInput input, .stTextArea textarea, .stSelectbox div[data-baseweb="select"] {{
         background-color: {COLOR_BG_CARD} !important;
         color: {COLOR_TEXT_MAIN} !important;
@@ -59,12 +56,10 @@ st.markdown(f"""
         border-radius: 8px !important;
         padding: 12px 16px !important;
     }}
-    /* フォーカス時 */
     .stTextInput input:focus, .stTextArea textarea:focus {{
         border-color: {COLOR_ACCENT} !important;
         box-shadow: 0 0 0 1px {COLOR_ACCENT} !important;
     }}
-    /* セレクトボックスのドロップダウン */
     div[data-baseweb="popover"] div {{
         background-color: {COLOR_BG_CARD} !important;
         color: {COLOR_TEXT_MAIN} !important;
@@ -73,7 +68,7 @@ st.markdown(f"""
         color: {COLOR_TEXT_MAIN} !important;
     }}
 
-    /* --- ボタン (Primary Green) --- */
+    /* ボタン (Primary Green) */
     div.stButton > button {{
         background-color: {COLOR_ACCENT} !important;
         color: #FFFFFF !important;
@@ -84,11 +79,10 @@ st.markdown(f"""
         transition: background-color 0.2s;
     }}
     div.stButton > button:hover {{
-        background-color: #0D8C6D !important; /* 少し暗い緑 */
+        background-color: #0D8C6D !important;
     }}
 
-    /* --- チャットバブル (ChatGPT Style) --- */
-    /* ユーザー (Dark Grey Box) */
+    /* チャットバブル */
     .chat-user {{
         background-color: {COLOR_BG_CARD};
         padding: 20px;
@@ -97,7 +91,6 @@ st.markdown(f"""
         color: {COLOR_TEXT_MAIN};
         border: 1px solid {COLOR_BORDER};
     }}
-    /* Owl (Transparent/Background) */
     .chat-owl {{
         background-color: transparent;
         padding: 20px;
@@ -117,25 +110,13 @@ st.markdown(f"""
         cursor: pointer;
         margin-right: 8px;
     }}
-    .feedback-btn:hover {{
-        background-color: {COLOR_ACCENT};
-        color: white;
-        border-color: {COLOR_ACCENT};
-    }}
 
-    /* --- ヘッダー・テキスト --- */
-    h1, h2, h3 {{
-        color: {COLOR_TEXT_MAIN} !important;
-    }}
-    p, div, span {{
-        color: {COLOR_TEXT_MAIN};
-    }}
-    .sub-text {{
-        color: {COLOR_TEXT_SUB} !important;
-        font-size: 0.9rem;
-    }}
+    /* ヘッダー・テキスト */
+    h1, h2, h3 {{ color: {COLOR_TEXT_MAIN} !important; }}
+    p, div, span {{ color: {COLOR_TEXT_MAIN}; }}
+    .sub-text {{ color: {COLOR_TEXT_SUB} !important; font-size: 0.9rem; }}
 
-    /* --- カード --- */
+    /* カード */
     .card {{
         background-color: {COLOR_BG_CARD};
         border: 1px solid {COLOR_BORDER};
@@ -240,7 +221,6 @@ if not st.session_state['user']:
         <br>
     </div>
     """, unsafe_allow_html=True)
-    
     _, c2, _ = st.columns([1,1,1])
     with c2:
         with st.form("login"):
@@ -255,7 +235,6 @@ user_name = get_user_name(current_user)
 
 # --- レイアウト ---
 
-# サイドバー
 st.sidebar.markdown(f"### 🦉 Owl v3.5")
 st.sidebar.markdown(f"<p style='color:#9CA3AF; font-size:0.8rem;'>User: {user_name}</p>", unsafe_allow_html=True)
 st.sidebar.markdown("---")
@@ -273,11 +252,13 @@ if st.sidebar.button("Logout"):
     st.session_state['user'] = None
     st.rerun()
 
-# --- アダプティブ設定 (v3.4.1 Logic) ---
+# --- プロンプト定義 (Fix: 定義位置を修正) ---
+STYLE = "【基本スタイル】\n1.言語:日本語\n2.禁止:自分語り/ポエム/説教\n3.構成:受容→分析→処方\n4.態度:プロのカウンセラー"
+
+# アダプティブ設定
 adaptive_prompt = ""
 if menu in ["M1 SNS", "M2 Editor", "M3 Sales"]:
     st.sidebar.markdown("### ⚙️ Settings")
-    
     TARGET_MEDIA = {
         "X (Twitter)": {"len": "140字以内", "tone": "共感・発見"},
         "X (Long)": {"len": "1000字", "tone": "ストーリー"},
@@ -307,14 +288,13 @@ if menu in ["M1 SNS", "M2 Editor", "M3 Sales"]:
                     st.session_state['img_context'] = res
                     st.sidebar.success("Done")
 
-# --- メインチャットUI (ChatGPT Style) ---
+# メインチャットUI
 def render_chat_interface(mode, base_system_prompt):
     if not client: st.warning("API Key Required"); return
     
     st.markdown(f"## {mode}")
     st.markdown(f"<p class='sub-text'>AI Assistant for {mode}</p>", unsafe_allow_html=True)
     
-    # プロンプト結合
     full_prompt = base_system_prompt + adaptive_prompt
     if 'img_context' in st.session_state and menu == "M1 SNS":
         full_prompt += f"\n[画像分析]: {st.session_state['img_context']}"
@@ -327,47 +307,28 @@ def render_chat_interface(mode, base_system_prompt):
     
     st.session_state[key][0]["content"] = full_prompt
 
-    # チャットログ表示
     for i, msg in enumerate(st.session_state[key]):
         if msg["role"] == "user":
-            st.markdown(f"""
-            <div class="chat-user">
-                <div style="font-weight:bold; margin-bottom:5px; color:#9CA3AF;">You</div>
-                {msg["content"]}
-            </div>
-            """, unsafe_allow_html=True)
+            st.markdown(f'<div class="chat-user"><div style="font-weight:bold; margin-bottom:5px; color:#9CA3AF;">You</div>{msg["content"]}</div>', unsafe_allow_html=True)
         elif msg["role"] == "assistant":
-            st.markdown(f"""
-            <div class="chat-owl">
-                <div style="font-weight:bold; margin-bottom:5px; color:#10A37F;">Owl</div>
-                {msg["content"]}
-            </div>
-            """, unsafe_allow_html=True)
-            # 評価ボタン
+            st.markdown(f'<div class="chat-owl"><div style="font-weight:bold; margin-bottom:5px; color:#10A37F;">Owl</div>{msg["content"]}</div>', unsafe_allow_html=True)
             c1, c2, _ = st.columns([1, 1, 10])
             with c1:
                 if st.button("👍", key=f"g_{key}_{i}"): save_feedback("GEN", mode, msg["content"], "good")
             with c2:
                 if st.button("👎", key=f"b_{key}_{i}"): save_feedback("GEN", mode, msg["content"], "bad")
 
-    st.markdown("<br><br>", unsafe_allow_html=True)
-
-    # 固定入力エリア風
+    st.markdown("<br>", unsafe_allow_html=True)
     with st.form(key=f"form_{mode}", clear_on_submit=True):
         user_input = st.text_area("Message Owl...", height=100)
-        c1, c2 = st.columns([6, 1])
-        with c2:
-            st.write("")
-            submit = st.form_submit_button("Send")
-    
-    if submit and user_input:
-        st.session_state[key].append({"role": "user", "content": user_input})
-        try:
-            with st.spinner("Thinking..."):
-                res = client.chat.completions.create(model="gpt-3.5-turbo", messages=st.session_state[key], max_tokens=3000)
-            st.session_state[key].append({"role": "assistant", "content": res.choices[0].message.content})
-            st.rerun()
-        except Exception as e: st.error(str(e))
+        if st.form_submit_button("Send") and user_input:
+            st.session_state[key].append({"role": "user", "content": user_input})
+            try:
+                with st.spinner("Thinking..."):
+                    res = client.chat.completions.create(model="gpt-3.5-turbo", messages=st.session_state[key], max_tokens=3000)
+                st.session_state[key].append({"role": "assistant", "content": res.choices[0].message.content})
+                st.rerun()
+            except Exception as e: st.error(str(e))
 
 # --- コンテンツ表示 ---
 
@@ -384,7 +345,6 @@ if menu == "Dashboard":
                 st.markdown(f'<div class="card"><b>{t["title"]}</b> <span style="float:right; color:#EF4444;">{t["priority"]}</span></div>', unsafe_allow_html=True)
                 if st.button("Done", key=f"d_d_{t['task_id']}"): complete_task(t['task_id']); st.rerun()
         else: st.info("No tasks.")
-    
     with c2:
         st.markdown("### 💬 Team Chat (Latest)")
         chats = get_team_chat().head(3)
@@ -393,30 +353,18 @@ if menu == "Dashboard":
 
 elif menu == "Team Chat":
     st.markdown("## Team Chat")
-    
     with st.form("team_chat"):
         msg = st.text_area("Message...")
         if st.form_submit_button("Send") and msg: send_team_chat(current_user, msg); st.rerun()
-    
     chats = get_team_chat()
     for i, c in chats.iterrows():
         is_me = c['user_id'] == current_user
         align = "text-align: right;" if is_me else ""
         bg = COLOR_BG_CARD if is_me else "transparent"
         border = f"1px solid {COLOR_BORDER}" if is_me else "none"
-        
-        st.markdown(f"""
-        <div style="{align}">
-            <div style="display:inline-block; background-color:{bg}; border:{border}; padding:10px 15px; border-radius:12px; text-align:left; margin-bottom:10px; color:{COLOR_TEXT_MAIN};">
-                <div style="font-size:0.8rem; color:#9CA3AF; margin-bottom:4px;">{c['user_id']}</div>
-                {c['message']}
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
+        st.markdown(f'<div style="{align}"><div style="display:inline-block; background-color:{bg}; border:{border}; padding:10px 15px; border-radius:12px; text-align:left; margin-bottom:10px; color:{COLOR_TEXT_MAIN};"><div style="font-size:0.8rem; color:#9CA3AF; margin-bottom:4px;">{c["user_id"]}</div>{c["message"]}</div></div>', unsafe_allow_html=True)
 
-# プロンプト (v2.5ベース)
-STYLE = "【基本スタイル】\n1.言語:日本語\n2.禁止:自分語り/ポエム/説教\n3.構成:受容→分析→処方\n4.態度:プロのカウンセラー"
-
+# ここで分岐 (Fix: STYLE変数はこの前で定義済みなのでエラーにならない)
 elif menu == "M4 Strategy":
     render_chat_interface("M4 Strategy", f"戦略参謀です。{STYLE}")
 elif menu == "M1 SNS":

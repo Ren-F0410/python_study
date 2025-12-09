@@ -10,7 +10,7 @@ import io
 import re
 
 # --- 1. アプリ設定 & デザイン ---
-st.set_page_config(page_title="Owl v3.6.5", page_icon="🦉", layout="wide")
+st.set_page_config(page_title="Owl v3.6.6", page_icon="🦉", layout="wide")
 
 # カラーパレット
 COLOR_BG_MAIN = "#0B1020"
@@ -32,10 +32,11 @@ st.markdown(f"""
     div.stButton > button {{ background-color: {COLOR_ACCENT} !important; color: #FFFFFF !important; border: none; border-radius: 6px; }}
     .chat-user {{ background: {COLOR_BG_CARD}; padding: 15px; border-radius: 8px; margin-bottom: 10px; border: 1px solid {COLOR_BORDER}; }}
     .chat-owl {{ background: transparent; padding: 15px; margin-bottom: 10px; border-bottom: 1px solid {COLOR_BORDER}; }}
-    .login-box {{ max-width: 400px; margin: 100px auto; padding: 40px; background: {COLOR_BG_CARD}; border-radius: 12px; text-align: center; }}
     
-    /* URL要約表示用のスタイル */
-    .url-summary {{ background: #1F2937; padding: 15px; border-left: 4px solid {COLOR_ACCENT}; border-radius: 4px; margin-top: 10px; font-size: 0.9rem; }}
+    /* URL要約カード */
+    .url-card {{ background: #1F2937; padding: 15px; border-radius: 8px; border-left: 5px solid {COLOR_ACCENT}; margin: 10px 0; }}
+    .url-title {{ font-weight: bold; font-size: 1.1em; margin-bottom: 5px; color: #FFF; }}
+    .url-summary {{ font-size: 0.9em; color: #D1D5DB; }}
 </style>
 """, unsafe_allow_html=True)
 
@@ -119,7 +120,7 @@ def extract_url(text):
     return urls[0] if urls else None
 
 def fetch_url_content(url):
-    headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'}
+    headers = {'User-Agent': 'Mozilla/5.0'}
     try:
         response = requests.get(url, headers=headers, timeout=10)
         response.encoding = response.apparent_encoding
@@ -127,7 +128,7 @@ def fetch_url_content(url):
         
         page_text = soup.get_text()
         if "JavaScript" in page_text and "enable" in page_text:
-            return "Block", "このサイトはプログラムからのアクセスをブロックしています。スクショを撮って添付してください。"
+            return "Block", "このサイトはプログラムからのアクセスをブロックしています。"
             
         title = soup.title.string if soup.title else url
         for script in soup(["script", "style"]):
@@ -142,23 +143,26 @@ def fetch_url_content(url):
     except Exception as e:
         return "Error", f"取得失敗: {str(e)}"
 
-# AIによる要約機能
-def summarize_text(client, text):
-    response = client.chat.completions.create(
-        model="gpt-3.5-turbo",
-        messages=[
-            {"role": "system", "content": "以下のテキストを日本語で簡潔に要約してください。重要なポイントを3箇条書きでまとめてください。"},
-            {"role": "user", "content": text[:3000]} # 長すぎるとエラーになるのでカット
-        ]
-    )
-    return response.choices[0].message.content
+# 要約AI
+def summarize_content(client, text):
+    try:
+        res = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": "以下のテキストの要点を3行の箇条書きで要約してください。"},
+                {"role": "user", "content": text[:3000]}
+            ]
+        )
+        return res.choices[0].message.content
+    except:
+        return "要約できませんでした。"
 
 def analyze_image(client, image_file):
     image_file.seek(0)
     b64 = base64.b64encode(image_file.read()).decode('utf-8')
     res = client.chat.completions.create(
         model="gpt-4o-mini",
-        messages=[{"role": "user", "content": [{"type": "text", "text": "分析してください。"}, {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{b64}"}}]}]
+        messages=[{"role": "user", "content": [{"type": "text", "text": "この画像を詳細に分析し、何が書かれているか、どんな雰囲気か説明してください。"}, {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{b64}"}}]}]
     )
     return res.choices[0].message.content
 
@@ -169,7 +173,7 @@ def generate_image(client, prompt):
 # --- 3. ログイン ---
 if 'user' not in st.session_state: st.session_state['user'] = None
 if not st.session_state['user']:
-    st.markdown(f"<div class='login-box'><h1>🦉 Owl v3.6.5</h1><p>Athenalink Operation System</p></div>", unsafe_allow_html=True)
+    st.markdown(f"<div class='login-box'><h1>🦉 Owl v3.6.6</h1><p>Athenalink Operation System</p></div>", unsafe_allow_html=True)
     _, c2, _ = st.columns([1,1,1])
     with c2:
         with st.form("login"):
@@ -183,7 +187,7 @@ current_user = st.session_state['user']
 user_name = get_user_name(current_user)
 
 # --- 4. レイアウト & モジュール ---
-st.sidebar.markdown(f"### 🦉 Owl v3.6.5")
+st.sidebar.markdown(f"### 🦉 Owl v3.6.6")
 st.sidebar.markdown(f"<p style='color:#9CA3AF;'>User: {user_name}</p>", unsafe_allow_html=True)
 st.sidebar.markdown("---")
 menu = st.sidebar.radio("MENU", ["Dashboard", "Team Chat", "M4 Strategy", "M1 SNS", "M2 Editor", "M3 Sales"])
@@ -225,27 +229,32 @@ STYLE = """
 def render_chat(mode, system_prompt):
     if not client: st.warning("API Key Required"); return
     
+    # プロンプト組立
     full_prompt = system_prompt + adaptive_prompt + STYLE
     if 'last_knowledge' in st.session_state:
-        full_prompt += f"\n\n【直近の学習データ】\n{st.session_state['last_knowledge']}\n"
+        full_prompt += f"\n\n【直近の学習・参照データ】\n{st.session_state['last_knowledge']}\n"
     
     key = f"chat_{current_user}_{mode}"
     if key not in st.session_state:
         st.session_state[key] = [{"role": "system", "content": full_prompt}]
-        st.session_state[key].append({"role": "assistant", "content": "準備完了。指示をください。"})
+        st.session_state[key].append({"role": "assistant", "content": "準備完了。URLや画像を貼るか、指示をください。"})
     
     st.session_state[key][0]["content"] = full_prompt
 
+    # ログ表示
     for i, msg in enumerate(st.session_state[key]):
         if msg["role"] == "user":
             st.markdown(f'<div class="chat-user"><b>You</b><br>{msg["content"]}</div>', unsafe_allow_html=True)
         elif msg["role"] == "assistant":
-            # URL要約や画像表示
-            if msg["content"].startswith("http") and "dalle" in msg["content"]:
+            # 特別表示：要約カードなどはHTMLでリッチに
+            if "div class='url-card'" in msg["content"]:
+                st.markdown(msg["content"], unsafe_allow_html=True)
+            elif msg["content"].startswith("http") and "dalle" in msg["content"]:
                 st.image(msg["content"], caption="Generated Image")
             else:
                 st.markdown(f'<div class="chat-owl"><b>Owl</b><br>{msg["content"]}</div>', unsafe_allow_html=True)
             
+            # 評価ボタン
             voted_good = st.session_state.get(f"fb_good_{key}_{i}")
             voted_bad = st.session_state.get(f"fb_bad_{key}_{i}")
             if voted_good: st.success("✅ Good")
@@ -265,83 +274,81 @@ def render_chat(mode, system_prompt):
 
     st.markdown("<br>", unsafe_allow_html=True)
     
-    # --- 📎 画像添付エリア (メイン画面に移動) ---
-    with st.expander("📎 画像を添付する (ここをクリック)", expanded=False):
-        uploaded_img = st.file_uploader("画像を選択", type=["jpg", "png"], key=f"uploader_{mode}")
+    # --- 画像アップローダー (メインエリアに移動) ---
+    with st.expander("📎 画像を添付する", expanded=False):
+        uploaded_img = st.file_uploader("画像を選択", type=["jpg", "png"], key=f"up_{mode}")
         if uploaded_img and client:
-            if st.button("画像の内容を読み込む"):
+            if st.button("画像を読み込んで記憶させる"):
                 with st.spinner("画像を分析中..."):
                     content = analyze_image(client, uploaded_img)
                     save_knowledge("image", uploaded_img.name, content)
-                    st.session_state['last_knowledge'] = content
-                    st.success("画像を読み込みました！チャットで指示を出してください。")
+                    st.session_state['last_knowledge'] = f"【画像分析データ】\n{content}"
+                    # 履歴に「読み込み完了」を追加
+                    st.session_state[key].append({"role": "assistant", "content": f"✅ 画像『{uploaded_img.name}』の内容を記憶しました。\n分析結果: {content[:100]}..."})
+                    st.rerun()
 
     # --- チャット入力 ---
     with st.form(key=f"form_{mode}", clear_on_submit=True):
         user_input = st.text_area("Message Owl...", height=100)
         if st.form_submit_button("Send") and user_input:
             
-            # URL処理 (要約版)
-            url_content = ""
+            # URL処理
+            url_html = ""
             extracted_url = extract_url(user_input)
             
             if extracted_url:
-                with st.spinner(f"🌍 URLを読み込んでいます..."):
+                with st.spinner("🌍 URLを読み込んでいます..."):
                     title, content = fetch_url_content(extracted_url)
                     if title == "Block":
                         st.warning(f"⚠️ {content}")
                     elif title != "Error":
-                        # AIに要約させる
-                        summary = summarize_text(client, content)
-                        
-                        # ユーザーに見せる用のきれいな表示HTML
-                        display_html = f"""
-                        <div class="url-summary">
-                            <strong>📄 {title}</strong><br><br>
-                            {summary}<br><br>
-                            <details><summary>▼ 元のテキスト全文を表示</summary><p>{content}</p></details>
+                        summary = summarize_content(client, content)
+                        # きれいなカード表示用HTML
+                        url_html = f"""
+                        <div class="url-card">
+                            <div class="url-title">📄 {title}</div>
+                            <div class="url-summary">{summary}</div>
+                            <details><summary style="color:#9CA3AF; cursor:pointer;">▶ 元のテキストを表示</summary>
+                            <p style="font-size:0.8em; color:#6B7280;">{content}</p></details>
                         </div>
                         """
-                        # AIに渡す用のデータ
-                        url_content = f"\n\n【URL内容】タイトル:{title}\n本文:{content}\n"
                         save_knowledge("url", title, content, meta=extracted_url)
+                        st.session_state['last_knowledge'] = f"【URL内容】タイトル:{title}\n本文:{content}"
                         
-                        # 履歴には要約済みのHTMLを追加（AIの回答として偽装して表示させるテクニック）
+                        # ユーザー発言としてURLを表示、アシスタント発言として要約カードを表示
                         st.session_state[key].append({"role": "user", "content": user_input})
-                        st.session_state[key].append({"role": "assistant", "content": display_html})
+                        st.session_state[key].append({"role": "assistant", "content": url_html})
                         
-                        # コンテキスト更新
-                        st.session_state['last_knowledge'] = content
+                        # URL単体ならここで終了（AI回答なし）
+                        if len(user_input.strip()) == len(extracted_url):
+                            st.rerun()
                     else:
                         st.error("URL読み込みエラー")
 
-            # 通常のチャット処理
-            if not extracted_url: # URL単体投稿でない場合
+            # 通常チャット処理 (URL単体でない場合)
+            if not extracted_url or len(user_input.strip()) > len(extracted_url):
                 st.session_state[key].append({"role": "user", "content": user_input})
-            
-            final_input = user_input + url_content
-            
-            if mode == "M1 SNS" and ("画像" in user_input and ("作って" in user_input or "生成" in user_input)):
-                with st.spinner("Generating Image..."):
+                
+                # 画像生成トリガー
+                if mode == "M1 SNS" and ("画像" in user_input and ("作って" in user_input or "生成" in user_input)):
+                    with st.spinner("Generating Image..."):
+                        try:
+                            img_url = generate_image(client, user_input)
+                            st.session_state[key].append({"role": "assistant", "content": img_url})
+                            st.rerun()
+                        except Exception as e: st.error(str(e))
+                else:
+                    # 通常回答
                     try:
-                        img_url = generate_image(client, user_input)
-                        st.session_state[key].append({"role": "assistant", "content": img_url})
+                        with st.spinner("Thinking..."):
+                            # プロンプトを再構築（最新のknowledgeを含める）
+                            msgs = st.session_state[key].copy()
+                            # 直前の要約カードなどはAIへの入力には不要なので除外するか、テキスト化して渡す
+                            # 簡易的に、system promptにknowledgeが入っているので、そのまま履歴を渡せばOK
+                            res = client.chat.completions.create(model="gpt-3.5-turbo", messages=msgs, max_tokens=3000)
+                        st.session_state[key].append({"role": "assistant", "content": res.choices[0].message.content})
                         st.rerun()
                     except Exception as e: st.error(str(e))
-            else:
-                # URL要約だけの場合はAI回答をスキップする調整も可能だが、
-                # ここでは「URLを踏まえてどうするか」をAIに答えさせる
-                msgs = st.session_state[key].copy()
-                # 直前の履歴が「要約表示」だった場合、それを除外してAIに渡す等の工夫が必要だが
-                # シンプルに「URLコンテンツ」をプロンプトに付与して投げる
-                msgs[-1]["content"] = final_input 
-                
-                try:
-                    with st.spinner("Thinking..."):
-                        res = client.chat.completions.create(model="gpt-3.5-turbo", messages=msgs, max_tokens=3000)
-                    st.session_state[key].append({"role": "assistant", "content": res.choices[0].message.content})
-                    st.rerun()
-                except Exception as e: st.error(str(e))
 
 # --- コンテンツ ---
 if menu == "Dashboard":
